@@ -3,11 +3,14 @@
 # Path to GDB macros file.  Customize for your site.
 GDBMACROS=/home/vagrant/.bin/gdb-macros
 
+
+GDBUSED=riscv32-unknown-linux-gnu-gdb
+
 # Choose correct GDB.
 if command -v i386-elf-gdb >/dev/null 2>&1; then
 	GDB=i386-elf-gdb
 else
-	GDB=cgdb
+	GDB=cgdb -d $GDBUSED
 fi
 
 # Run GDB.

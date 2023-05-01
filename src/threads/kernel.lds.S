@@ -1,33 +1,50 @@
 #include "threads/loader.h"
 
-OUTPUT_FORMAT("elf32-i386")
-OUTPUT_ARCH("i386")
+OUTPUT_ARCH(riscv)
 ENTRY(start)			/* Kernel starts at "start" symbol. */
 SECTIONS
 {
+  MEM_LENGTH = 0x4000000;
+  PROVIDE(__stack_top = LOADER_PHYS_BASE + MEM_LENGTH);
+  PROVIDE(__mem_length = MEM_LENGTH);
   /* Specify the kernel base address. */
-  _start = LOADER_PHYS_BASE + LOADER_KERN_BASE;
+  _start = LOADER_PHYS_BASE;
 
-  /* Make room for the ELF headers. */
-  . = _start + SIZEOF_HEADERS;
+  . = _start;
 
   /* Kernel starts with code, followed by read-only data and writable data. */
-  .text : { *(.start) *(.text) } = 0x90
-  .rodata : { *(.rodata) *(.rodata.*)
+  .init : {
+        KEEP (*(SORT_NONE(.init)))
+	      . = ALIGN(0x1000);
+  }
+  .text : { *(.start) 
+	      . = ALIGN(0x1000);
+        *(.text)
+	      . = ALIGN(0x1000); }
+  .rodata : { 
+	      . = ALIGN(0x1000);
+        *(.rodata) *(.rodata.*)
 	      . = ALIGN(0x1000);
 	      _end_kernel_text = .; }
   .eh_frame : { *(.eh_frame) }
-  .data : { *(.data)
+  .data : { 
+	      . = ALIGN(0x1000);
+        *(.data)
+	      . = ALIGN(0x1000);
 	    _signature = .; LONG(0xaa55aa55) }
 
-  .plt : { *(.plt*) }
+  .plt : { 
+	      . = ALIGN(0x1000);
+        *(.plt*) }
 
   /* BSS (zero-initialized data) is after everything else. */
   _start_bss = .;
-  .bss : { *(.bss) }
+  .bss : { 
+	      . = ALIGN(0x1000);
+        *(.bss) }
   _end_bss = .;
 
   _end = .;
 
-  ASSERT (_end - _start <= 512K, "Kernel image is too big.")
+  # ASSERT (_end - _start <= 64K, "Loader image is too big.")
 }

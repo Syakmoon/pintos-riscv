@@ -10,7 +10,7 @@
 
 /* Kernel virtual address at which all physical memory is mapped.
    Must be aligned on a 4 MB boundary. */
-#define LOADER_PHYS_BASE 0xc0000000 /* 3 GB. */
+#define LOADER_PHYS_BASE 0x80000000 /* 3 GB. */
 
 /* Important loader physical addresses. */
 #define LOADER_SIG (LOADER_END - LOADER_SIG_LEN)          /* 0xaa55 BIOS signature. */
