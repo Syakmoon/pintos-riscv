@@ -19,14 +19,14 @@ threads_SRC += threads/kmain.c		# Main program.
 # threads_SRC += threads/thread.c		# Thread management core.
 # threads_SRC += threads/switch.S		# Thread switch routine.
 # threads_SRC += threads/interrupt.c	# Interrupt core.
-# threads_SRC += threads/intr-stubs.S	# Interrupt stubs.
+threads_SRC += threads/intr-stubs.S	# Interrupt stubs.
 # threads_SRC += threads/synch.c		# Synchronization.
 # threads_SRC += threads/palloc.c		# Page allocator.
 # threads_SRC += threads/malloc.c		# Subpage allocator.
 
 # Device driver code.
 # devices_SRC  = devices/pit.c		# Programmable interrupt timer chip.
-# devices_SRC += devices/timer.c		# Periodic timer device.
+devices_SRC = devices/timer.c		# Periodic timer device.
 # devices_SRC += devices/kbd.c		# Keyboard device.
 # devices_SRC += devices/vga.c		# Video device.
 # devices_SRC += devices/serial.c		# Serial port device.

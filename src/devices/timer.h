@@ -4,6 +4,12 @@
 #include <round.h>
 #include <stdint.h>
 
+#define CLINT 0x2000000L
+#define CLINT_MTIME (CLINT + 0xbff8)
+
+/* 10ms on QEMU emulation */
+#define TIMER_INTERVAL 1000000  // TODO: change to some other approaches
+
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
 
