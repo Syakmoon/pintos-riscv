@@ -32,7 +32,7 @@ static unsigned loops_per_tick;
 // static void real_time_delay(int64_t num, int32_t denom);
 
 void timer_init(void) {
-  *(uint64_t*) CLINT_MTIME += TIMER_INTERVAL;
+  *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
 }
 
 // /* Sets up the timer to interrupt TIMER_FREQ times per second,

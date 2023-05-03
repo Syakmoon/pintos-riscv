@@ -6,6 +6,7 @@
 
 #define CLINT 0x2000000L
 #define CLINT_MTIME (CLINT + 0xbff8)
+#define CLINT_MTIMECMP (CLINT + 0x4000) /* We have only one HART. */
 
 /* 10ms on QEMU emulation */
 #define TIMER_INTERVAL 1000000  // TODO: change to some other approaches

@@ -4,7 +4,14 @@
 #include "devices/timer.h"
 
 extern void mintr_entry();
-extern int main(void);
+// extern int main(void);
+
+int main(void) {
+    for(int a = 0; a < INTMAX_MAX; ++a){
+        asm volatile("" : : : "memory");
+    }
+    return 1024;
+}
 
 /* Initializes the mstatus register. */
 static void mstatus_init() {
@@ -29,8 +36,12 @@ static void delegate_traps() {
 
 /* Sets up the pmp to allow Supervisor to acess all of physical memory. */
 static void pmp_init() {
+    /* If TOR is selected, the associated address register forms 
+       the top of the address range, and the preceding PMP address 
+       register forms the bottom of the address range.
+       We used PMP entry 0 here, so it will match any address y < PMPADDR0. */
     csr_write(CSR_PMPADDR0, -1UL);
-    uintptr_t pmpcfg = PMP_CFG_R | PMP_CFG_W | PMP_CFG_X;
+    uintptr_t pmpcfg = PMP_CFG_A_TOR | PMP_CFG_R | PMP_CFG_W | PMP_CFG_X;
     csr_write(CSR_PMPCFG0, pmpcfg);
 }
 
@@ -60,9 +71,11 @@ static void return_to_supervisor() {
     csr_write(CSR_MSTATUS, mstatus);
 
     /* Set MEPC to main to mret to this function. */
-    // csr_write(CSR_MEPC, main);
+    csr_write(CSR_MEPC, main);
 
     machine_interrupt_init();
+
+    asm volatile ("csrw mscratch, sp");
 
     mret();
 }

@@ -61,6 +61,7 @@
 #define PMP_CFG_R           0x01
 #define PMP_CFG_W           0x02
 #define PMP_CFG_X           0x04
+#define PMP_CFG_A_TOR		    0x08
 
 /* Converted IRQs. */
 #define INT_SSI             (1 << IRQ_S_SOFTWARE)
