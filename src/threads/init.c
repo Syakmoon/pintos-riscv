@@ -193,6 +193,8 @@ static char** read_command_line(void) {
   int argc;
   int i;
 
+  // 0x83e001ac
+
   argc = *(uint32_t*)ptov(LOADER_ARG_CNT);
   p = ptov(LOADER_ARGS);
   end = p + LOADER_ARGS_LEN;

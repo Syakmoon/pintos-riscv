@@ -64,7 +64,7 @@ static int nlz(uint32_t x) {
 
 /* Divides unsigned 64-bit N by unsigned 64-bit D and returns the
    quotient. */
-static uint64_t udiv64(uint64_t n, uint64_t d) {
+static uint64_t udiv64_2(uint64_t n, uint64_t d) {
   if ((d >> 32) == 0) {
     /* Proof of correctness:
 
@@ -110,6 +110,32 @@ static uint64_t udiv64(uint64_t n, uint64_t d) {
   }
 }
 
+// TEMP: Can change this to a "correct" function?
+/* Another version of udiv64. When number overflows, this function does not 
+   yield the correct answer as udiv64_2 does.
+   Reference: libgcc/config/riscv.div.S. */
+uint64_t udiv64(uint64_t n, uint64_t d) {
+    uint64_t n1 = -1ULL;
+    if (d == 0) {
+        return -1;
+    }
+    uint64_t p1 = 1;
+    while (d < n && d > 0) {
+        d <<= 1;
+        p1 <<= 1;
+    }
+    n1 = 0;
+    while (p1 > 0) {
+        if (n >= d) {
+            n -= d;
+            n1 |= p1;
+        }
+        p1 >>= 1;
+        d >>= 1;
+    }
+    return n1;
+}
+
 /* Divides unsigned 64-bit N by unsigned 64-bit D and returns the
    remainder. */
 static uint32_t umod64(uint64_t n, uint64_t d) { return n - d * udiv64(n, d); }
@@ -128,6 +154,7 @@ static int64_t sdiv64(int64_t n, int64_t d) {
 static int32_t smod64(int64_t n, int64_t d) { return n - d * sdiv64(n, d); }
 
 /* These are the routines that GCC calls. */
+#if __riscv_xlen == 32
 
 long long __divdi3(long long n, long long d);
 long long __moddi3(long long n, long long d);
@@ -145,3 +172,6 @@ unsigned long long __udivdi3(unsigned long long n, unsigned long long d) { retur
 
 /* Unsigned 64-bit remainder. */
 unsigned long long __umoddi3(unsigned long long n, unsigned long long d) { return umod64(n, d); }
+
+#else
+#endif /* __riscv_xlen */

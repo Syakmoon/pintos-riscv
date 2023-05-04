@@ -11,8 +11,11 @@
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
 
+/* QEMU timebase frequency. */
+#define QEMU_FREQ 0x989680
+
 /* 100000000 is 1 second on QEMU emulation */
-#define TIMER_INTERVAL 100000000 / TIMER_FREQ  // TODO: change to some other approaches
+#define TIMER_INTERVAL QEMU_FREQ / TIMER_FREQ  // TODO: change to some other approaches
 
 void timer_init(void);
 void timer_calibrate(void);
