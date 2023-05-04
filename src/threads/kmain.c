@@ -2,14 +2,18 @@
 #include <stdint.h>
 // #include "threads/init.h"
 #include "threads/interrupt.h"
+#include "threads/vaddr.h"
 #include "devices/timer.h"
 
 extern void mintr_entry();
 // extern int main(void);
 
 int main(void) {
+    intr_init();
+    intr_enable();
     for(int a = 0; a < INTMAX_MAX; ++a){
-        asm volatile("" : : : "memory");
+        // asm volatile("" : : : "memory");
+        wfi();
     }
     return 1024;
 }
@@ -55,6 +59,8 @@ static void machine_interrupt_init() {
 
     csr_write(CSR_MTVEC, mintr_entry);
     csr_write(CSR_MSTATUS, mstatus);
+
+    asm volatile ("csrw mscratch, sp");
 }
 
 static void return_to_supervisor() {
@@ -71,9 +77,18 @@ static void return_to_supervisor() {
 
     machine_interrupt_init();
 
-    asm volatile ("csrw mscratch, sp");
+    // TEMP: we pretend that timer interrupt won't not happen before mret
+    /* Set up the init thread's stack. */
+    unsigned long sp_value;
+    asm volatile ("mv %0, sp" : "=r" (sp_value));
+    sp_value = pg_round_down(sp_value);
+    asm volatile("mv sp, %0" : : "r" (sp_value));
+
+    /* Null-terminate main()'s backtrace */
+    asm volatile("mv ra, %0" : : "r" (0));
 
     mret();
+    __builtin_unreachable();    /* Forbids returning. */
 }
 
 /* start.S will jump to this function. */

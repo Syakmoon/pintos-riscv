@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-#define UART 0x10000000L
-
 void serial_init_queue(void);
 void serial_putc(uint8_t);
 void serial_flush(void);

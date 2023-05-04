@@ -45,7 +45,8 @@ void exception_init(void) {
   intr_register_int(EXC_ECALL_S, true, INTR_ON, kill, "#ES Environment Call From S-mode");;
   intr_register_int(EXC_ECALL_M, true, INTR_ON, kill, "#EM Environment Call From M-mode");;
 
-  /* Page faults. */
+  /* Page faults. This is different from the original x86 Pintos in that
+     we can turn on interrupt for page faults. */
   intr_register_int(EXC_INSTRUCTION_PAGE_FAULT, true, INTR_ON, page_fault, "#PF Instruction Page Fault");
   intr_register_int(EXC_LOAD_PAGE_FAULT, true, INTR_ON, page_fault, "#PF Load Page Fault");
   intr_register_int(EXC_STORE_PAGE_FAULT, true, INTR_ON, page_fault, "#PF Store/AMO Page Fault");

@@ -15,7 +15,7 @@
    Refer to [PC16650D] for hardware information. */
 
 /* I/O port base address for the first serial port. */
-#define IO_BASE 0x3f8
+#define IO_BASE 0x10000000L
 
 /* DLAB=0 registers. */
 #define RBR_REG (IO_BASE + 0) /* Receiver Buffer Reg. (read-only). */

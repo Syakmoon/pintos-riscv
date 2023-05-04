@@ -74,26 +74,29 @@
 
 .endm
 
+/* RISC-V requires TVEC to be 2^2 bytes aligned. */
 .align 2
 .globl mintr_entry
 .func mintr_entry
 mintr_entry:
    /* If the trap is from kernel, sp will get 0. */
   csrrw sp, mscratch, sp
-  bnez sp, save_context
+  bnez sp, msave_context
   csrr sp, mscratch
-save_context:
+msave_context:
   save_gpr
 
   /* Saves other registers. */
   csrr t0, mepc
-  csrr t1, mcause
-  csrrw t2, mscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
+  csrrw t1, mscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
+  csrr t2, mcause
   csrr t3, mtval  /* For page fault etc. */
-  REG_S x5, 0*REGBYTES(sp)
-  REG_S x6, 32*REGBYTES(sp)
-  REG_S x7, 2*REGBYTES(sp)
-  REG_S x28, 33*REGBYTES(sp)
+  csrr t4, mstatus
+  REG_S t0, 0*REGBYTES(sp)
+  REG_S t1, 2*REGBYTES(sp)
+  REG_S t2, 32*REGBYTES(sp)
+  REG_S t3, 33*REGBYTES(sp)
+  REG_S t4, 34*REGBYTES(sp)
   
   /* s0 is a callee-saved register, so we can safely assume it is unchanged. */
   csrr   s0,mstatus
@@ -107,8 +110,10 @@ save_context:
 .func mintr_exit
 mintr_exit:
   /* Loads other registers. */
-  REG_L x5, 0*REGBYTES(sp)
+  REG_L t0, 0*REGBYTES(sp)
+  REG_L t4, 34*REGBYTES(sp)
   csrw mepc, t0
+  csrw mstatus, t4
 
   load_gpr
 
@@ -118,22 +123,78 @@ mintr_exit:
   bnez s0, 1f
   addi sp, sp, INTR_FRAME_SIZE
   csrw mscratch, sp
-  REG_L x8,  8*REGBYTES(sp)
-  REG_L x2,  2*REGBYTES(sp)
+  REG_L x8,  8*REGBYTES-INTR_FRAME_SIZE(sp)
+  REG_L x2,  2*REGBYTES-INTR_FRAME_SIZE(sp)
   mret
-  wfi /* It should never return after mret */
+  j wfi_loop /* It should never return after mret */
 1:
   REG_L x8,  8*REGBYTES(sp)
   addi sp, sp, INTR_FRAME_SIZE
   mret
-  wfi /* It should never return after mret */
+  j wfi_loop /* It should never return after mret */
 .endfunc
 
 .align 2
 .globl intr_entry
 .func intr_entry
 intr_entry:
+   /* If the trap is from kernel, sp will get 0. */
+  csrrw sp, sscratch, sp
+  bnez sp, save_context
+  csrr sp, sscratch
+save_context:
+  save_gpr
+
+  /* Saves other registers. */
+  csrr t0, sepc
+  csrrw t1, sscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
+  csrr t2, scause
+  csrr t3, stval  /* For page fault etc. */
+  csrr t4, sstatus
+  REG_S t0, 0*REGBYTES(sp)
+  REG_S t1, 2*REGBYTES(sp)
+  REG_S t2, 32*REGBYTES(sp)
+  REG_S t3, 33*REGBYTES(sp)
+  REG_S t4, 34*REGBYTES(sp)
+  
+  /* s0 is a callee-saved register, so we can safely assume it is unchanged. */
+  csrr   s0,sstatus
+
+  /* Put sp, which points to `struct intr_frame`, to argument 0. */
+  mv a0, sp
+  jal intr_handler
 .endfunc
+
+.globl intr_exit
+.func intr_exit
+intr_exit:
+  /* Loads other registers. */
+  REG_L x5, 0*REGBYTES(sp)
+  REG_L t4, 34*REGBYTES(sp)
+  csrw sepc, t0
+  csrw sstatus, t4
+
+  load_gpr
+
+  /* If we are trapping from kernel (Supervisor), do not restore CSR_SCRATCH. */
+  andi s0, s0, SSTATUS_SPP
+  bnez s0, 1f
+  addi sp, sp, INTR_FRAME_SIZE
+  csrw sscratch, sp
+  REG_L x8,  8*REGBYTES-INTR_FRAME_SIZE(sp)
+  REG_L x2,  2*REGBYTES-INTR_FRAME_SIZE(sp)
+  sret
+  j wfi_loop /* It should never return after sret */
+1:
+  REG_L x8,  8*REGBYTES(sp)
+  addi sp, sp, INTR_FRAME_SIZE
+  sret
+  j wfi_loop /* It should never return after sret */
+.endfunc
+
+wfi_loop:
+  wfi
+  j wfi_loop
 
 # /* Main interrupt entry point.
 

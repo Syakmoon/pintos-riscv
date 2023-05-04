@@ -34,10 +34,10 @@ enum intr_level intr_disable(void);
 struct intr_frame {
   void (*epc)(void); /* Next instruction to execute. */
 
-  unsigned long ra;
-  unsigned long sp;
-  unsigned long gp;
-  unsigned long tp;
+  void* ra;
+  void* sp;
+  void* gp;
+  void* tp;
   unsigned long t0;
   unsigned long t1;
   unsigned long t2;
@@ -68,6 +68,7 @@ struct intr_frame {
 
   long cause; /* Trap cause number. */
   unsigned long trap_val; /* For page fault etc. */
+  unsigned long status;
 };
 
 // struct intr_frame {

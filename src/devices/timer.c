@@ -39,13 +39,14 @@ void timer_init(void) {
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
 
   intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
-  intr_register_int(IRQ_S_TIMER, false, INTR_ON, timer_interrupt, "Supervisor Timer");
+  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, timer_interrupt, "Supervisor Timer");
     
   /* Enables Machine timer interrupt. */
   csr_write(CSR_MIE, csr_read(CSR_MIE) | INT_MTI);
 
-  /* Enables Supervisor timer interrupt. */
-  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_STI);
+  /* Enables Supervisor software interrupt.
+     Supervisor timer interrupt does not exist. */
+  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SSI);
 }
 
 // /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -140,13 +141,19 @@ int64_t timer_ticks(void) {
 static void timer_interrupt(struct intr_frame* args UNUSED) {
   ticks++;
   thread_tick();
+
+  /* When bit i in sip is writable, a pending interrupt i can be cleared
+     by writing 0 to this bit. */
+  csr_write(CSR_SIP, csr_read(CSR_SIP) & ~(1 << IRQ_S_SOFTWARE));
 }
 
 // TODO: enforce this?
 /* Machine timer interrupt handler. */
 static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
   *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
-  csr_write(CSR_SIP, csr_read(CSR_SIP) | (1 << IRQ_S_TIMER));
+
+  /* Writing to STIP is ignored, so we write to SSIP instead.  */
+  csr_write(CSR_SIP, csr_read(CSR_SIP) | (1 << IRQ_S_SOFTWARE));
 }
 
 // /* Returns true if LOOPS iterations waits for more than one timer

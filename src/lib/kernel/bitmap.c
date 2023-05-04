@@ -4,7 +4,8 @@
 #include <round.h>
 #include <stdio.h>
 #include "threads/malloc.h"
-#ifdef FILESYS
+// #ifdef FILESYS
+#ifdef TEMP
 #include "filesys/file.h"
 #endif
 
@@ -119,10 +120,11 @@ void bitmap_mark(struct bitmap* b, size_t bit_idx) {
   size_t idx = elem_idx(bit_idx);
   elem_type mask = bit_mask(bit_idx);
 
-  /* This is equivalent to `b->bits[idx] |= mask' except that it
-     is guaranteed to be atomic on a uniprocessor machine.  See
-     the description of the OR instruction in [IA32-v2b]. */
-  asm("orl %1, %0" : "=m"(b->bits[idx]) : "r"(mask) : "cc");
+  b->bits[idx] |= mask;
+  // /* This is equivalent to `b->bits[idx] |= mask' except that it
+  //    is guaranteed to be atomic on a uniprocessor machine.  See
+  //    the description of the OR instruction in [IA32-v2b]. */
+  // asm("orl %1, %0" : "=m"(b->bits[idx]) : "r"(mask) : "cc");
 }
 
 /* Atomically sets the bit numbered BIT_IDX in B to false. */
@@ -130,10 +132,11 @@ void bitmap_reset(struct bitmap* b, size_t bit_idx) {
   size_t idx = elem_idx(bit_idx);
   elem_type mask = bit_mask(bit_idx);
 
-  /* This is equivalent to `b->bits[idx] &= ~mask' except that it
-     is guaranteed to be atomic on a uniprocessor machine.  See
-     the description of the AND instruction in [IA32-v2a]. */
-  asm("andl %1, %0" : "=m"(b->bits[idx]) : "r"(~mask) : "cc");
+  b->bits[idx] &= ~mask;
+  // /* This is equivalent to `b->bits[idx] &= ~mask' except that it
+  //    is guaranteed to be atomic on a uniprocessor machine.  See
+  //    the description of the AND instruction in [IA32-v2a]. */
+  // asm("andl %1, %0" : "=m"(b->bits[idx]) : "r"(~mask) : "cc");
 }
 
 /* Atomically toggles the bit numbered IDX in B;
@@ -143,10 +146,11 @@ void bitmap_flip(struct bitmap* b, size_t bit_idx) {
   size_t idx = elem_idx(bit_idx);
   elem_type mask = bit_mask(bit_idx);
 
-  /* This is equivalent to `b->bits[idx] ^= mask' except that it
-     is guaranteed to be atomic on a uniprocessor machine.  See
-     the description of the XOR instruction in [IA32-v2b]. */
-  asm("xorl %1, %0" : "=m"(b->bits[idx]) : "r"(mask) : "cc");
+  b->bits[idx] ^= mask;
+  // /* This is equivalent to `b->bits[idx] ^= mask' except that it
+  //    is guaranteed to be atomic on a uniprocessor machine.  See
+  //    the description of the XOR instruction in [IA32-v2b]. */
+  // asm("xorl %1, %0" : "=m"(b->bits[idx]) : "r"(mask) : "cc");
 }
 
 /* Returns the value of the bit numbered IDX in B. */
@@ -262,7 +266,8 @@ size_t bitmap_scan_and_flip(struct bitmap* b, size_t start, size_t cnt, bool val
 
 /* File input and output. */
 
-#ifdef FILESYS
+// #ifdef FILESYS
+#ifdef TEMP
 /* Returns the number of bytes needed to store B in a file. */
 size_t bitmap_file_size(const struct bitmap* b) { return byte_cnt(b->bit_cnt); }
 

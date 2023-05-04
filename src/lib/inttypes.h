@@ -31,6 +31,13 @@
 #define PRIx64 "llx"
 #define PRIX64 "llX"
 
+#define PRIdLONG "ld"
+#define PRIiLONG "li"
+#define PRIoLONG "lo"
+#define PRIuLONG "lu"
+#define PRIxLONG "lx"
+#define PRIXLONG "lX"
+
 #define PRIdMAX "jd"
 #define PRIiMAX "ji"
 #define PRIoMAX "jo"

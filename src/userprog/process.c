@@ -5,9 +5,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include "userprog/gdt.h"
+// #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
-#include "userprog/tss.h"
+// #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -125,7 +125,7 @@ static void start_process(void* file_name_) {
      arguments on the stack in the form of a `struct intr_frame',
      we just point the stack pointer (%esp) to our stack frame
      and jump to it. */
-  asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
+  // asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
   NOT_REACHED();
 }
 
@@ -195,7 +195,7 @@ void process_activate(void) {
 
   /* Set thread's kernel stack for use in processing interrupts.
      This does nothing if this is not a user process. */
-  tss_update();
+  // tss_update();
 }
 
 /* We load ELF binaries.  The following definitions are taken

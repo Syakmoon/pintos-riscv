@@ -22,7 +22,9 @@
 #define PLIC_S_CLAIM     (PLIC + 0x201004)
 #define PLIC_S_COMPLETE  PLIC_S_CLAIM
 
-/* Number of x86 interrupts. */
+extern void intr_entry();
+
+/* Number of interrupts. */
 #define INTR_CNT 256
 
 /* 0-127: exceptions. 128-: external exceptions. -255: interrupts. */
@@ -91,9 +93,11 @@ enum intr_level intr_disable(void) {
   return old_level;
 }
 
+#define EXTERNAL_OFFSET INTR_CNT / 2
+
 static inline uint8_t to_real_vec_no(uint8_t vec_no, bool exception, bool external) {
   if (external)
-    return vec_no + INTR_CNT / 2;
+    return vec_no + EXTERNAL_OFFSET;
   else if (!exception)
     return INTR_CNT - vec_no - 1;
   return vec_no;
@@ -104,7 +108,7 @@ static uint8_t cause_to_vec_no(long cause) {
     if ((cause & 0xf) >= 8 && (cause & 0xf) <= 11)
       return to_real_vec_no(plic_claim(), false, true);
   }
-  return to_real_vec_no(cause & INTPTR_MAX, cause < 0, false);
+  return to_real_vec_no(cause & INTPTR_MAX, cause >= 0, false);
 }
 
 /* Initializes the interrupt system. */
@@ -258,7 +262,7 @@ static inline bool is_trap_from_userspace(struct intr_frame* frame) {
    intr-stubs.S.  FRAME describes the interrupt and the
    interrupted thread's registers. */
 void intr_handler(struct intr_frame* frame) {
-  bool external;
+  bool external, s_timer, m_timer;
   intr_handler_func* handler;
 
   /* External interrupts are special.
@@ -267,16 +271,26 @@ void intr_handler(struct intr_frame* frame) {
      An external interrupt handler cannot sleep. */
   external = frame->cause < 0 
             && (frame->cause & 0xf) >=8 && (frame->cause & 0xf) <= 11;
+
+  /* To keep the context consistent with the original x86 Pintos,
+     We do the same things for Supervisor timer interrupt as external ones. */
+  s_timer = frame->cause < 0 
+            && (frame->cause & 0xf) == IRQ_S_SOFTWARE;
+  m_timer = frame->cause < 0 
+            && (frame->cause & 0xf) == IRQ_M_TIMER;
   
-  if (external) {
+  if (external || s_timer) {
     ASSERT(intr_get_level() == INTR_OFF);
     ASSERT(!intr_context());
 
     in_external_intr = true;
     yield_on_return = false;
   }
+  else if (!m_timer)
+    /* We should enable interrupt to keep consistent with x86 Pintos. */
+    intr_enable();
 
-  long vec_no = cause_to_vec_no(frame->cause);
+  uint8_t vec_no = cause_to_vec_no(frame->cause);
 
   /* Invoke the interrupt's handler. */
   handler = intr_handlers[vec_no];
@@ -286,28 +300,25 @@ void intr_handler(struct intr_frame* frame) {
     unexpected_interrupt(frame);
 
   /* Complete the processing of an external interrupt. */
-  if (external) {
+  if (external || s_timer) {
     ASSERT(intr_get_level() == INTR_OFF);
     ASSERT(intr_context());
 
     in_external_intr = false;
-    plic_end_of_interrupt(frame->vec_no);
+    if (external)
+      plic_end_of_interrupt(vec_no - EXTERNAL_OFFSET);
 
     if (yield_on_return)
       thread_yield();
   }
 }
 
-#if __riscv_xlen == 32
-#define PRIx PRIx32
-#else
-#define PRIx PRIx64
-#endif /* __riscv_xlen */
+#define PRIx PRIxLONG
 
 /* Handles an unexpected interrupt with interrupt frame F.  An
    unexpected interrupt is one that has no registered handler. */
 static void unexpected_interrupt(const struct intr_frame* f) {
-  long vec_no = cause_to_vec_no(f->cause);
+  uint8_t vec_no = cause_to_vec_no(f->cause);
 
   /* Count the number so far. */
   unsigned int n = ++unexpected_cnt[vec_no];
@@ -325,7 +336,7 @@ static void unexpected_interrupt(const struct intr_frame* f) {
 
 /* Dumps interrupt frame F to the console, for debugging. */
 void intr_dump_frame(const struct intr_frame* f) {
-  long vec_no = cause_to_vec_no(f->cause);
+  uint8_t vec_no = cause_to_vec_no(f->cause);
 
   /* stval is the linear address of the last page fault.
      See [riscv-priviledged-20211203] 
@@ -333,8 +344,8 @@ void intr_dump_frame(const struct intr_frame* f) {
 
   printf("Interrupt %#04x (%s) at epc=%p, cause %" PRIx "\n", vec_no, intr_names[vec_no], f->epc, f->cause);
   printf(" stval=%08" PRIx "\n", f->trap_val);
-  printf(" ra=%08" PRIx " sp=%08" PRIx " gp=%08" PRIx " tp=%08" PRIx "\n", f->ra,
-         f->sp, f->gp, f->tp);
+  printf(" ra=%08" PRIx " sp=%08" PRIx " gp=%08" PRIx " tp=%08" PRIx "\n", (unsigned long) f->ra,
+         (unsigned long) f->sp, (unsigned long) f->gp, (unsigned long) f->tp);
   printf(" t0=%08" PRIx " t1=%08" PRIx " t2=%08" PRIx "\n", f->t0,
          f->t1, f->t2);
   printf(" s0=%08" PRIx " s1=%08" PRIx "\n", f->s0,

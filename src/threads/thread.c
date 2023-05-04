@@ -4,14 +4,15 @@
 #include <random.h>
 #include <stdio.h>
 #include <string.h>
-#include "threads/flags.h"
+#include <riscv.h>
 #include "threads/interrupt.h"
 #include "threads/intr-stubs.h"
 #include "threads/palloc.h"
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-#ifdef USERPROG
+// #ifdef USERPROG
+#ifdef TEMP
 #include "userprog/process.h"
 #endif
 
@@ -140,7 +141,8 @@ void thread_tick(void) {
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
-#ifdef USERPROG
+// #ifdef USERPROG
+#ifdef TEMP
   else if (t->pcb != NULL)
     user_ticks++;
 #endif
@@ -386,7 +388,7 @@ static void idle(void* idle_started_ UNUSED) {
 
          See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
          7.11.1 "HLT Instruction". */
-    asm volatile("sti; hlt" : : : "memory");
+    // asm volatile("sti; hlt" : : : "memory");
   }
 }
 
@@ -401,14 +403,14 @@ static void kernel_thread(thread_func* function, void* aux) {
 
 /* Returns the running thread. */
 struct thread* running_thread(void) {
-  uint32_t* esp;
+  uint32_t* sp;
 
-  /* Copy the CPU's stack pointer into `esp', and then round that
+  /* Copy the CPU's stack pointer into `sp', and then round that
      down to the start of a page.  Because `struct thread' is
      always at the beginning of a page and the stack pointer is
      somewhere in the middle, this locates the curent thread. */
-  asm("mov %%esp, %0" : "=g"(esp));
-  return pg_round_down(esp);
+  asm("mv %0, sp" : "=g" (sp));
+  return pg_round_down(sp);
 }
 
 /* Returns true if T appears to point to a valid thread. */
@@ -428,7 +430,7 @@ static void init_thread(struct thread* t, const char* name, int priority) {
   strlcpy(t->name, name, sizeof t->name);
   t->stack = (uint8_t*)t + PGSIZE;
   t->priority = priority;
-  t->pcb = NULL;
+  // t->pcb = NULL;
   t->magic = THREAD_MAGIC;
 
   old_level = intr_disable();
@@ -512,7 +514,8 @@ void thread_switch_tail(struct thread* prev) {
   /* Start new time slice. */
   thread_ticks = 0;
 
-#ifdef USERPROG
+// #ifdef USERPROG
+#ifdef TEMP
   /* Activate the new address space. */
   process_activate();
 #endif

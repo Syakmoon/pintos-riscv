@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "devices/serial.h"
-#include "devices/vga.h"
+// #include "devices/vga.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
@@ -155,5 +155,5 @@ static void putchar_have_lock(uint8_t c) {
   ASSERT(console_locked_by_current_thread());
   write_cnt++;
   serial_putc(c);
-  vga_putc(c);
+  // vga_putc(c);
 }
