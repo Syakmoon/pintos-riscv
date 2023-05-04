@@ -116,7 +116,7 @@ void intr_init(void) {
   plic_init();
 
   /* Load Supervisor trap vector. */
-  // csr_write(CSR_STVEC, intr_entry);
+  csr_write(CSR_STVEC, intr_entry);
 
   /* Initialize intr_names. */
   for (i = 0; i < INTR_CNT; i++)
@@ -189,9 +189,12 @@ static void plic_init(void) {
   outl(PLIC_S_PRIORITY, 0);
   outl(PLIC_M_PRIORITY, 1);
 
-  /* Unmask all interrupts. */
   // TEMP: this is just for debugging, now?
+  /* Unmask all interrupts. */
   outl(PLIC_S_ENABLE, (uint32_t) -1);
+
+  /* Enables Supervisor externa interrupt. */
+  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SEI);
 }
 
 /* Enables the corresponding IRQ for Supervisor 

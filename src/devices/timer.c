@@ -35,9 +35,17 @@ static intr_handler_func timer_interrupt_machine;
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding interrupt. */
 void timer_init(void) {
+  /* Set Machine timer to the next interval. */
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
+
   intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
   intr_register_int(IRQ_S_TIMER, false, INTR_ON, timer_interrupt, "Supervisor Timer");
+    
+  /* Enables Machine timer interrupt. */
+  csr_write(CSR_MIE, csr_read(CSR_MIE) | INT_MTI);
+
+  /* Enables Supervisor timer interrupt. */
+  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_STI);
 }
 
 // /* Calibrates loops_per_tick, used to implement brief delays. */

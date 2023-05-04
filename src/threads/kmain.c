@@ -49,17 +49,12 @@ static void pmp_init() {
 /* Sets up the Machine trap handler and enables interrupts. */
 static void machine_interrupt_init() {
     uintptr_t mstatus = csr_read(CSR_MSTATUS);
-    uintptr_t mie = csr_read(CSR_MIE);
 
     /* Enable Machine interrupts. */
     mstatus |= MSTATUS_MIE;
-    
-    /* Enable Machine timer interrupt. */
-    mie |= INT_MTI;
 
     csr_write(CSR_MTVEC, mintr_entry);
     csr_write(CSR_MSTATUS, mstatus);
-    csr_write(CSR_MIE, mie);
 }
 
 static void return_to_supervisor() {
