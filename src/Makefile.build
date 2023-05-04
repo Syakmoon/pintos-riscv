@@ -18,9 +18,9 @@ threads_SRC += threads/kmain.c		# Main program.
 # threads_SRC += threads/init.c		# Main program.
 # threads_SRC += threads/thread.c		# Thread management core.
 # threads_SRC += threads/switch.S		# Thread switch routine.
-# threads_SRC += threads/interrupt.c	# Interrupt core.
+threads_SRC += threads/interrupt.c	# Interrupt core.
 threads_SRC += threads/intr-stubs.S	# Interrupt stubs.
-# threads_SRC += threads/synch.c		# Synchronization.
+threads_SRC += threads/synch.c		# Synchronization.
 # threads_SRC += threads/palloc.c		# Page allocator.
 # threads_SRC += threads/malloc.c		# Subpage allocator.
 
@@ -36,7 +36,7 @@ devices_SRC = devices/timer.c		# Periodic timer device.
 # devices_SRC += devices/input.c		# Serial and keyboard input.
 # devices_SRC += devices/intq.c		# Interrupt queue.
 # devices_SRC += devices/rtc.c		# Real-time clock.
-# devices_SRC += devices/shutdown.c	# Reboot and power off.
+devices_SRC += devices/shutdown.c	# Reboot and power off.
 # devices_SRC += devices/speaker.c	# PC speaker.
 
 # Library code shared between kernel and user programs.
@@ -51,7 +51,7 @@ devices_SRC = devices/timer.c		# Periodic timer device.
 
 # Kernel-specific library code.
 # lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
-# lib/kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
+lib/kernel_SRC = lib/kernel/list.c	# Doubly-linked lists.
 # lib/kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
 # lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
 # lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar().
@@ -60,7 +60,7 @@ devices_SRC = devices/timer.c		# Periodic timer device.
 # User process code.
 # userprog_SRC  = userprog/process.c	# Process loading.
 # userprog_SRC += userprog/pagedir.c	# Page directories.
-# userprog_SRC += userprog/exception.c	# User exception handler.
+userprog_SRC = userprog/exception.c	# User exception handler.
 # userprog_SRC += userprog/syscall.c	# System call handler.
 # userprog_SRC += userprog/gdt.c		# GDT initialization.
 # userprog_SRC += userprog/tss.c		# TSS management.

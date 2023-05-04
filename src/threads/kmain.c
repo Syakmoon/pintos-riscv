@@ -1,6 +1,7 @@
 #include <riscv.h>
 #include <stdint.h>
 // #include "threads/init.h"
+#include "threads/interrupt.h"
 #include "devices/timer.h"
 
 extern void mintr_entry();

@@ -8,11 +8,11 @@
 #define CLINT_MTIME (CLINT + 0xbff8)
 #define CLINT_MTIMECMP (CLINT + 0x4000) /* We have only one HART. */
 
-/* 10ms on QEMU emulation */
-#define TIMER_INTERVAL 1000000  // TODO: change to some other approaches
-
 /* Number of timer interrupts per second. */
 #define TIMER_FREQ 100
+
+/* 100000000 is 1 second on QEMU emulation */
+#define TIMER_INTERVAL 100000000 / TIMER_FREQ  // TODO: change to some other approaches
 
 void timer_init(void);
 void timer_calibrate(void);

@@ -89,16 +89,18 @@ save_context:
   csrr t0, mepc
   csrr t1, mcause
   csrrw t2, mscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
+  csrr t3, mtval  /* For page fault etc. */
   REG_S x5, 0*REGBYTES(sp)
   REG_S x6, 32*REGBYTES(sp)
   REG_S x7, 2*REGBYTES(sp)
+  REG_S x28, 33*REGBYTES(sp)
   
   /* s0 is a callee-saved register, so we can safely assume it is unchanged. */
   csrr   s0,mstatus
 
   /* Put sp, which points to `struct intr_frame`, to argument 0. */
   mv a0, sp
-#   jal intr_handler
+  jal intr_handler
 .endfunc
 
 .globl mintr_exit
@@ -110,9 +112,9 @@ mintr_exit:
 
   load_gpr
 
-  /* If we are trapping from kernel, do not restore CSR_SCRATCH. */
+  /* If we are trapping from kernel (Machine), do not restore CSR_SCRATCH. */
   srli s0, s0, MSTATUS_MPP_BIT
-  andi s0, s0, 3
+  andi s0, s0, 2
   bnez s0, 1f
   addi sp, sp, INTR_FRAME_SIZE
   csrw mscratch, sp
@@ -125,6 +127,12 @@ mintr_exit:
   addi sp, sp, INTR_FRAME_SIZE
   mret
   wfi /* It should never return after mret */
+.endfunc
+
+.align 2
+.globl intr_entry
+.func intr_entry
+intr_entry:
 .endfunc
 
 # /* Main interrupt entry point.

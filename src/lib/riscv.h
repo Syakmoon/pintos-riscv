@@ -1,8 +1,6 @@
 #ifndef __LIB_RISCV_H
 #define __LIB_RISCV_H
 
-#define UART 0x10000000L
-
 #define CSR_MSTATUS		0x300
 #define CSR_MEDELEG 0x302
 #define CSR_MIDELEG 0x303
@@ -33,41 +31,16 @@
 #define MSTATUS_MPP_S       0x00000800
 #define MSTATUS_FS          0x00006000
 
-// TODO: Put these into interrupt.h
-/* Interrupts. */
-#define IRQ_S_SOFTWARE      1
-#define IRQ_S_TIMER         5
-#define IRQ_M_TIMER         7
-#define IRQ_S_EXTERNAL      9
-#define IRQ_M_EXTERNAL      11
-
-/* Exceptions. */
-#define EXC_INSTRUCTION_MISALIGNED 0
-#define EXC_INSTRUCTION_FAULT 1
-#define EXC_ILLEGAL_INSTRUCTION 2
-#define EXC_BREAKPOINT 3
-#define EXC_LOAD_MISALIGNED 4
-#define EXC_LOAD_FAULT 5
-#define EXC_STORE_MISALIGNED 6
-#define EXC_STORE_FAULT 7
-#define EXC_ECALL_U 8
-#define EXC_ECALL_S 9
-#define EXC_ECALL_M 11
-#define EXC_INSTRUCTION_PAGE_FAULT 12
-#define EXC_LOAD_PAGE_FAULT 13
-#define EXC_STORE_PAGE_FAULT 15
+/* Register sstatus. */
+#define SSTATUS_SIE         0x00000002
+#define SSTATUS_SPIE        0x00000010
+#define SSTATUS_SPP         0x00000100
 
 /* PMP configuration register. */
 #define PMP_CFG_R           0x01
 #define PMP_CFG_W           0x02
 #define PMP_CFG_X           0x04
-#define PMP_CFG_A_TOR		    0x08
-
-/* Converted IRQs. */
-#define INT_SSI             (1 << IRQ_S_SOFTWARE)
-#define INT_STI             (1 << IRQ_S_TIMER)
-#define INT_MTI             (1 << IRQ_M_TIMER)
-#define INT_SEI             (1 << IRQ_S_EXTERNAL)
+#define PMP_CFG_A_TOR		0x08
 
 #ifndef __ASSEMBLER__
 #define __ASM_STR(x)	#x

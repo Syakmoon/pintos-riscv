@@ -6,8 +6,8 @@
 #include <riscv.h>
 // #include "devices/pit.h"
 #include "threads/interrupt.h"
-// #include "threads/synch.h"
-// #include "threads/thread.h"
+#include "threads/synch.h"
+#include "threads/thread.h"
 
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -25,22 +25,20 @@ static int64_t ticks;
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
 
-// static intr_handler_func timer_interrupt;
+static intr_handler_func timer_interrupt;
+static intr_handler_func timer_interrupt_machine;
 // static bool too_many_loops(unsigned loops);
 // static void busy_wait(int64_t loops);
 // static void real_time_sleep(int64_t num, int32_t denom);
 // static void real_time_delay(int64_t num, int32_t denom);
 
+/* Sets up the timer to interrupt TIMER_FREQ times per second,
+   and registers the corresponding interrupt. */
 void timer_init(void) {
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
+  intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
+  intr_register_int(IRQ_S_TIMER, false, INTR_ON, timer_interrupt, "Supervisor Timer");
 }
-
-// /* Sets up the timer to interrupt TIMER_FREQ times per second,
-//    and registers the corresponding interrupt. */
-// void timer_init(void) {
-//   pit_configure_channel(0, 2, TIMER_FREQ);
-//   intr_register_ext(0x20, timer_interrupt, "8254 Timer");
-// }
 
 // /* Calibrates loops_per_tick, used to implement brief delays. */
 // void timer_calibrate(void) {
@@ -66,13 +64,13 @@ void timer_init(void) {
 //   printf("%'" PRIu64 " loops/s.\n", (uint64_t)loops_per_tick * TIMER_FREQ);
 // }
 
-// /* Returns the number of timer ticks since the OS booted. */
-// int64_t timer_ticks(void) {
-//   enum intr_level old_level = intr_disable();
-//   int64_t t = ticks;
-//   intr_set_level(old_level);
-//   return t;
-// }
+/* Returns the number of timer ticks since the OS booted. */
+int64_t timer_ticks(void) {
+  enum intr_level old_level = intr_disable();
+  int64_t t = ticks;
+  intr_set_level(old_level);
+  return t;
+}
 
 // /* Returns the number of timer ticks elapsed since THEN, which
 //    should be a value once returned by timer_ticks(). */
@@ -130,11 +128,18 @@ void timer_init(void) {
 // /* Prints timer statistics. */
 // void timer_print_stats(void) { printf("Timer: %" PRId64 " ticks\n", timer_ticks()); }
 
-// /* Timer interrupt handler. */
-// static void timer_interrupt(struct intr_frame* args UNUSED) {
-//   ticks++;
-//   thread_tick();
-// }
+/* Supervisor timer interrupt handler. */
+static void timer_interrupt(struct intr_frame* args UNUSED) {
+  ticks++;
+  thread_tick();
+}
+
+// TODO: enforce this?
+/* Machine timer interrupt handler. */
+static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
+  *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
+  csr_write(CSR_SIP, csr_read(CSR_SIP) | (1 << IRQ_S_TIMER));
+}
 
 // /* Returns true if LOOPS iterations waits for more than one timer
 //    tick, otherwise false. */

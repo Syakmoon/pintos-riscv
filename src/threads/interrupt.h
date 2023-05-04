@@ -11,6 +11,19 @@ enum intr_level {
   INTR_ON   /* Interrupts enabled. */
 };
 
+/* Interrupts. */
+#define IRQ_S_SOFTWARE      1
+#define IRQ_S_TIMER         5
+#define IRQ_M_TIMER         7
+#define IRQ_S_EXTERNAL      9
+#define IRQ_M_EXTERNAL      11
+
+/* Converted IRQs. */
+#define INT_SSI             (1 << IRQ_S_SOFTWARE)
+#define INT_STI             (1 << IRQ_S_TIMER)
+#define INT_MTI             (1 << IRQ_M_TIMER)
+#define INT_SEI             (1 << IRQ_S_EXTERNAL)
+
 enum intr_level intr_get_level(void);
 enum intr_level intr_set_level(enum intr_level);
 enum intr_level intr_enable(void);
@@ -53,7 +66,8 @@ struct intr_frame {
   unsigned long t5;
   unsigned long t6;
 
-  unsigned long vec_no; /* Interrupt vector number. */
+  long cause; /* Trap cause number. */
+  unsigned long trap_val; /* For page fault etc. */
 };
 
 // struct intr_frame {
@@ -97,7 +111,7 @@ typedef void intr_handler_func(struct intr_frame*);
 
 void intr_init(void);
 void intr_register_ext(uint8_t vec, intr_handler_func*, const char* name);
-void intr_register_int(uint8_t vec, int dpl, enum intr_level, intr_handler_func*, const char* name);
+void intr_register_int(uint8_t vec, bool exception, enum intr_level, intr_handler_func*, const char* name);
 bool intr_context(void);
 void intr_yield_on_return(void);
 

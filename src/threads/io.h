@@ -4,88 +4,100 @@
 #include <stddef.h>
 #include <stdint.h>
 
-/* Reads and returns a byte from PORT. */
-static inline uint8_t inb(uint16_t port) {
-  /* See [IA32-v2a] "IN". */
+/* Reads and returns a byte from ADDRESS. */
+static inline uint8_t inb(uint8_t* address) {
   uint8_t data;
-  asm volatile("inb %w1, %b0" : "=a"(data) : "Nd"(port));
+  data = *address;
   return data;
 }
 
-/* Reads CNT bytes from PORT, one after another, and stores them
+/* Reads CNT bytes from ADDRESS, one after another, and stores them
    into the buffer starting at ADDR. */
-static inline void insb(uint16_t port, void* addr, size_t cnt) {
-  /* See [IA32-v2a] "INS". */
-  asm volatile("rep insb" : "+D"(addr), "+c"(cnt) : "d"(port) : "memory");
+static inline void insb(uint8_t* address, void* addr, size_t cnt) {
+  uint8_t* type_addr = addr;
+  while (cnt > 0) {
+    *(type_addr++) = *(address++);
+    --cnt;
+  }
 }
 
-/* Reads and returns 16 bits from PORT. */
-static inline uint16_t inw(uint16_t port) {
+/* Reads and returns 16 bits from ADDRESS. */
+static inline uint16_t inw(uint16_t* address) {
   uint16_t data;
-  /* See [IA32-v2a] "IN". */
-  asm volatile("inw %w1, %w0" : "=a"(data) : "Nd"(port));
+  data = *address;
   return data;
 }
 
-/* Reads CNT 16-bit (halfword) units from PORT, one after
+/* Reads CNT 16-bit (halfword) units from ADDRESS, one after
    another, and stores them into the buffer starting at ADDR. */
-static inline void insw(uint16_t port, void* addr, size_t cnt) {
-  /* See [IA32-v2a] "INS". */
-  asm volatile("rep insw" : "+D"(addr), "+c"(cnt) : "d"(port) : "memory");
+static inline void insw(uint16_t* address, void* addr, size_t cnt) {
+  uint16_t* type_addr = addr;
+  while (cnt > 0) {
+    *(type_addr++) = *(address++);
+    --cnt;
+  }
 }
 
-/* Reads and returns 32 bits from PORT. */
-static inline uint32_t inl(uint16_t port) {
-  /* See [IA32-v2a] "IN". */
+/* Reads and returns 32 bits from ADDRESS. */
+static inline uint32_t inl(uint32_t* address) {
   uint32_t data;
-  asm volatile("inl %w1, %0" : "=a"(data) : "Nd"(port));
+  data = *address;
   return data;
 }
 
-/* Reads CNT 32-bit (word) units from PORT, one after another,
+/* Reads CNT 32-bit (word) units from ADDRESS, one after another,
    and stores them into the buffer starting at ADDR. */
-static inline void insl(uint16_t port, void* addr, size_t cnt) {
-  /* See [IA32-v2a] "INS". */
-  asm volatile("rep insl" : "+D"(addr), "+c"(cnt) : "d"(port) : "memory");
+static inline void insl(uint32_t* address, void* addr, size_t cnt) {
+  uint32_t* type_addr = addr;
+  while (cnt > 0) {
+    *(type_addr++) = *(address++);
+    --cnt;
+  }
 }
 
-/* Writes byte DATA to PORT. */
-static inline void outb(uint16_t port, uint8_t data) {
-  /* See [IA32-v2b] "OUT". */
-  asm volatile("outb %b0, %w1" : : "a"(data), "Nd"(port));
+/* Writes byte DATA to ADDRESS. */
+static inline void outb(uint8_t* address, uint8_t data) {
+  *address = data;
 }
 
-/* Writes to PORT each byte of data in the CNT-byte buffer
+/* Writes to ADDRESS each byte of data in the CNT-byte buffer
    starting at ADDR. */
-static inline void outsb(uint16_t port, const void* addr, size_t cnt) {
-  /* See [IA32-v2b] "OUTS". */
-  asm volatile("rep outsb" : "+S"(addr), "+c"(cnt) : "d"(port));
+static inline void outsb(uint8_t* address, const void* addr, size_t cnt) {
+  uint8_t* type_addr = addr;
+  while (cnt > 0) {
+    *(address++) = *(type_addr++);
+    --cnt;
+  }
 }
 
-/* Writes the 16-bit DATA to PORT. */
-static inline void outw(uint16_t port, uint16_t data) {
-  /* See [IA32-v2b] "OUT". */
-  asm volatile("outw %w0, %w1" : : "a"(data), "Nd"(port));
+/* Writes the 16-bit DATA to ADDRESS. */
+static inline void outw(uint16_t* address, uint16_t data) {
+  *address = data;
 }
 
-/* Writes to PORT each 16-bit unit (halfword) of data in the
+/* Writes to ADDRESS each 16-bit unit (halfword) of data in the
    CNT-halfword buffer starting at ADDR. */
-static inline void outsw(uint16_t port, const void* addr, size_t cnt) {
-  /* See [IA32-v2b] "OUTS". */
-  asm volatile("rep outsw" : "+S"(addr), "+c"(cnt) : "d"(port));
+static inline void outsw(uint16_t* address, const void* addr, size_t cnt) {
+  uint16_t* type_addr = addr;
+  while (cnt > 0) {
+    *(address++) = *(type_addr++);
+    --cnt;
+  }
 }
 
-/* Writes the 32-bit DATA to PORT. */
-static inline void outl(uint16_t port, uint32_t data) {
-  /* See [IA32-v2b] "OUT". */
-  asm volatile("outl %0, %w1" : : "a"(data), "Nd"(port));
+/* Writes the 32-bit DATA to ADDRESS. */
+static inline void outl(uint32_t* address, uint32_t data) {
+  *address = data;
 }
 
-/* Writes to PORT each 32-bit unit (word) of data in the CNT-word
+/* Writes to ADDRESS each 32-bit unit (word) of data in the CNT-word
    buffer starting at ADDR. */
-static inline void outsl(uint16_t port, const void* addr, size_t cnt) {
-  /* See [IA32-v2b] "OUTS". */
-  asm volatile("rep outsl" : "+S"(addr), "+c"(cnt) : "d"(port));
+static inline void outsl(uint32_t* address, const void* addr, size_t cnt) {
+  uint32_t* type_addr = addr;
+  while (cnt > 0) {
+    *(address++) = *(type_addr++);
+    --cnt;
+  }
 }
 
 #endif /* threads/io.h */
