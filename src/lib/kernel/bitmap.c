@@ -4,8 +4,7 @@
 #include <round.h>
 #include <stdio.h>
 #include "threads/malloc.h"
-// #ifdef FILESYS
-#ifdef TEMP
+#ifdef FILESYS
 #include "filesys/file.h"
 #endif
 
@@ -266,8 +265,7 @@ size_t bitmap_scan_and_flip(struct bitmap* b, size_t start, size_t cnt, bool val
 
 /* File input and output. */
 
-// #ifdef FILESYS
-#ifdef TEMP
+#ifdef FILESYS
 /* Returns the number of bytes needed to store B in a file. */
 size_t bitmap_file_size(const struct bitmap* b) { return byte_cnt(b->bit_cnt); }
 

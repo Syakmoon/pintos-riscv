@@ -30,9 +30,9 @@ devices_SRC = devices/timer.c		# Periodic timer device.
 # devices_SRC += devices/kbd.c		# Keyboard device.
 # devices_SRC += devices/vga.c		# Video device.
 devices_SRC += devices/serial.c		# Serial port device.
-# devices_SRC += devices/block.c		# Block device abstraction layer.
-# devices_SRC += devices/partition.c	# Partition block device.
-# devices_SRC += devices/ide.c		# IDE disk block device.
+devices_SRC += devices/block.c		# Block device abstraction layer.
+devices_SRC += devices/partition.c	# Partition block device.
+devices_SRC += devices/ide.c		# IDE disk block device.
 devices_SRC += devices/input.c		# Serial and keyboard input.
 devices_SRC += devices/intq.c		# Interrupt queue.
 # devices_SRC += devices/rtc.c		# Real-time clock.
@@ -53,15 +53,15 @@ lib_SRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
 lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
 lib/kernel_SRC += lib/kernel/list.c	# Doubly-linked lists.
 lib/kernel_SRC += lib/kernel/bitmap.c	# Bitmaps.
-# lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
+lib/kernel_SRC += lib/kernel/hash.c	# Hash tables.
 lib/kernel_SRC += lib/kernel/console.c	# printf(), putchar().
 # lib/kernel_SRC += lib/kernel/test-lib.c # Testing functions
 
 # User process code.
-# userprog_SRC  = userprog/process.c	# Process loading.
-# userprog_SRC += userprog/pagedir.c	# Page directories.
-userprog_SRC = userprog/exception.c	# User exception handler.
-# userprog_SRC += userprog/syscall.c	# System call handler.
+userprog_SRC  = userprog/process.c	# Process loading.
+userprog_SRC += userprog/pagedir.c	# Page directories.
+userprog_SRC += userprog/exception.c	# User exception handler.
+userprog_SRC += userprog/syscall.c	# System call handler.
 # userprog_SRC += userprog/gdt.c		# GDT initialization.
 # userprog_SRC += userprog/tss.c		# TSS management.
 
@@ -69,11 +69,11 @@ userprog_SRC = userprog/exception.c	# User exception handler.
 #vm_SRC = vm/file.c			# Some file.
 
 # Filesystem code.
-# filesys_SRC  = filesys/filesys.c	# Filesystem core.
-# filesys_SRC += filesys/free-map.c	# Free sector bitmap.
-# filesys_SRC += filesys/file.c		# Files.
-# filesys_SRC += filesys/directory.c	# Directories.
-# filesys_SRC += filesys/inode.c		# File headers.
+filesys_SRC  = filesys/filesys.c	# Filesystem core.
+filesys_SRC += filesys/free-map.c	# Free sector bitmap.
+filesys_SRC += filesys/file.c		# Files.
+filesys_SRC += filesys/directory.c	# Directories.
+filesys_SRC += filesys/inode.c		# File headers.
 # filesys_SRC += filesys/fsutil.c		# Utilities.
 
 SOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))

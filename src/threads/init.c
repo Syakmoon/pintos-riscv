@@ -8,14 +8,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <test-lib.h>
-#include "devices/kbd.h"
+// #include <test-lib.h>
+// #include "devices/kbd.h"
 #include "devices/input.h"
 #include "devices/serial.h"
 #include "devices/shutdown.h"
 #include "devices/timer.h"
-#include "devices/vga.h"
-#include "devices/rtc.h"
+// #include "devices/vga.h"
+// #include "devices/rtc.h"
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/loader.h"
@@ -26,19 +26,17 @@
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
-#include "userprog/gdt.h"
 #include "userprog/syscall.h"
-#include "userprog/tss.h"
-#include "tests/userprog/kernel/tests.h"
+// #include "tests/userprog/kernel/tests.h"
 #endif
 #ifdef THREADS
-#include "tests/threads/tests.h"
+// #include "tests/threads/tests.h"
 #endif
 #ifdef FILESYS
 #include "devices/block.h"
 #include "devices/ide.h"
 #include "filesys/filesys.h"
-#include "filesys/fsutil.h"
+// #include "filesys/fsutil.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -81,8 +79,8 @@ int main(void) {
   bss_init();
 
   /* Break command line into arguments and parse options. */
-  argv = read_command_line();
-  argv = parse_options(argv);
+  // argv = read_command_line();
+  // argv = parse_options(argv);
 
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
@@ -97,16 +95,10 @@ int main(void) {
   malloc_init();
   paging_init();
 
-  /* Segmentation. */
-#ifdef USERPROG
-  tss_init();
-  gdt_init();
-#endif
-
   /* Initialize interrupt handlers. */
   intr_init();
   timer_init();
-  kbd_init();
+  // kbd_init();
   input_init();
 #ifdef USERPROG
   exception_init();
@@ -182,7 +174,7 @@ static void paging_init(void) {
      new page tables immediately.  See [IA32-v2a] "MOV--Move
      to/from Control Registers" and [IA32-v3a] 3.7.5 "Base Address
      of the Page Directory". */
-  asm volatile("movl %0, %%cr3" : : "r"(vtop(init_page_dir)));
+  // asm volatile("movl %0, %%cr3" : : "r"(vtop(init_page_dir)));
 }
 
 /* Breaks the kernel command line into words and returns them as
@@ -325,7 +317,7 @@ static void run_userprog_kernel_task(char** argv) {
 
   printf("Executing '%s':\n", task);
 #ifdef USERPROG
-  run_userprog_test(task);
+  // run_userprog_test(task);
 #endif
   printf("Execution of '%s' complete.\n", task);
 }
@@ -336,7 +328,7 @@ static void run_threads_kernel_task(char** argv) {
   const char* task = argv[1];
 
   printf("Executing '%s':\n", task);
-  run_threads_test(task);
+  // run_threads_test(task);
   printf("Execution of '%s' complete.\n", task);
 }
 #endif
@@ -443,11 +435,11 @@ static void usage(void) {
 #ifdef FILESYS
 /* Figure out what block devices to cast in the various Pintos roles. */
 static void locate_block_devices(void) {
-  locate_block_device(BLOCK_FILESYS, filesys_bdev_name);
-  locate_block_device(BLOCK_SCRATCH, scratch_bdev_name);
-#ifdef VM
-  locate_block_device(BLOCK_SWAP, swap_bdev_name);
-#endif
+//   locate_block_device(BLOCK_FILESYS, filesys_bdev_name);
+//   locate_block_device(BLOCK_SCRATCH, scratch_bdev_name);
+// #ifdef VM
+//   locate_block_device(BLOCK_SWAP, swap_bdev_name);
+// #endif
 }
 
 /* Figures out what block device to use for the given ROLE: the

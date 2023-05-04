@@ -95,8 +95,13 @@ static void select_device_wait(const struct ata_disk*);
 
 static void interrupt_handler(struct intr_frame*);
 
+static void usedless(void* _ UNUSED, block_sector_t __ UNUSED, void* ___ UNUSED) {}
+static struct block_operations NOP = {usedless, usedless};
+
 /* Initialize the disk subsystem and detect disks. */
 void ide_init(void) {
+  block_register("USELESS", BLOCK_RAW, NULL, 0, &NOP, NULL);
+  return;
   size_t chan_no;
 
   for (chan_no = 0; chan_no < CHANNEL_CNT; chan_no++) {
@@ -445,10 +450,11 @@ static void select_device_wait(const struct ata_disk* d) {
 
 /* ATA interrupt handler. */
 static void interrupt_handler(struct intr_frame* f) {
+  return;
   struct channel* c;
 
   for (c = channels; c < channels + CHANNEL_CNT; c++)
-    if (f->vec_no == c->irq) {
+    if (f->cause == c->irq) {
       if (c->expecting_interrupt) {
         inb(reg_status(c));           /* Acknowledge interrupt. */
         sema_up(&c->completion_wait); /* Wake up waiter. */

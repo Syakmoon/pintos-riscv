@@ -5,9 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include "userprog/gdt.h"
 #include "userprog/pagedir.h"
-// #include "userprog/tss.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
 #include "filesys/filesys.h"
@@ -74,7 +72,7 @@ pid_t process_execute(const char* file_name) {
 static void start_process(void* file_name_) {
   char* file_name = (char*)file_name_;
   struct thread* t = thread_current();
-  struct intr_frame if_;
+  struct intr_frame if_ __attribute__ ((aligned (16)));
   bool success, pcb_success;
 
   /* Allocate process control block */
@@ -96,10 +94,10 @@ static void start_process(void* file_name_) {
   /* Initialize interrupt frame and load executable. */
   if (success) {
     memset(&if_, 0, sizeof if_);
-    if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-    if_.cs = SEL_UCSEG;
-    if_.eflags = FLAG_IF | FLAG_MBS;
-    success = load(file_name, &if_.eip, &if_.esp);
+    // if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
+    // if_.cs = SEL_UCSEG;
+    // if_.eflags = FLAG_IF | FLAG_MBS;
+    // success = load(file_name, &if_.eip, &if_.esp);
   }
 
   /* Handle failure with succesful PCB malloc. Must free the PCB */

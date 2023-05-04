@@ -2,16 +2,20 @@
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
+#include "userprog/exception.h"
 #include "threads/thread.h"
 #include "userprog/process.h"
 
 static void syscall_handler(struct intr_frame*);
 
-void syscall_init(void) { intr_register_int(0x30, 3, INTR_ON, syscall_handler, "syscall"); }
+void syscall_init(void) { intr_register_int(EXC_ECALL_U, true, INTR_ON, syscall_handler, "syscall"); }
 
 static void syscall_handler(struct intr_frame* f UNUSED) {
   f->epc += 4;
-  uint32_t* args = ((uint32_t*)f->esp);
+  unsigned long args0 = ((uint32_t*)f->a0);
+  unsigned long args1 = ((uint32_t*)f->a1);
+  unsigned long args2 = ((uint32_t*)f->a2);
+  unsigned long args3 = ((uint32_t*)f->a3);
 
   /*
    * The following print statement, if uncommented, will print out the syscall
@@ -22,9 +26,9 @@ static void syscall_handler(struct intr_frame* f UNUSED) {
 
   /* printf("System call number: %d\n", args[0]); */
 
-  if (args[0] == SYS_EXIT) {
-    f->eax = args[1];
-    printf("%s: exit(%d)\n", thread_current()->pcb->process_name, args[1]);
-    process_exit();
+  if (args0 == SYS_EXIT) {
+    f->a0 = args1;
+    // printf("%s: exit(%d)\n", thread_current()->pcb->process_name, args[1]);
+    // process_exit();
   }
 }

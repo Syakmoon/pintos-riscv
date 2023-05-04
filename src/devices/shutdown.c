@@ -9,10 +9,10 @@
 #ifdef USERPROG
 #include "userprog/exception.h"
 #endif
-// #ifdef FILESYS
-// #include "devices/block.h"
-// #include "filesys/filesys.h"
-// #endif
+#ifdef FILESYS
+#include "devices/block.h"
+#include "filesys/filesys.h"
+#endif
 
 /* Keyboard control register port. */
 #define CONTROL_REG 0x64
@@ -102,9 +102,9 @@ void shutdown_power_off(void) {
 static void print_stats(void) {
   timer_print_stats();
   thread_print_stats();
-// #ifdef FILESYS
-//   block_print_stats();
-// #endif
+#ifdef FILESYS
+  block_print_stats();
+#endif
   console_print_stats();
 //   kbd_print_stats();
 #ifdef USERPROG

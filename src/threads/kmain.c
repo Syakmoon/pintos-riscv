@@ -8,6 +8,8 @@
 extern void mintr_entry();
 // extern int main(void);
 
+void* fdt_ptr;
+
 int main(void) {
     intr_init();
     intr_enable();
@@ -84,15 +86,22 @@ static void return_to_supervisor() {
     sp_value = pg_round_down(sp_value);
     asm volatile("mv sp, %0" : : "r" (sp_value));
 
-    /* Null-terminate main()'s backtrace */
+    /* Null-terminate main()'s backtrace. */
     asm volatile("mv ra, %0" : : "r" (0));
+
+    /* Pass in the pointer to fdt as the first argument */
+    asm volatile("mv a0, %0" : : "r" (fdt_ptr));
 
     mret();
     __builtin_unreachable();    /* Forbids returning. */
 }
 
-/* start.S will jump to this function. */
-void kmain() {
+/* start.S will jump to this function.
+   By default, QEMU sets A0 as hart ID, and A1 as a pointer to FDT. */
+void kmain(int hart UNUSED, void* fdt) {
+    /* We save the pointer to fdt for main to discover device information. */
+    fdt_ptr = fdt;
+
     mstatus_init();
 
     /* Disable paging. */

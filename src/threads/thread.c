@@ -11,8 +11,7 @@
 #include "threads/switch.h"
 #include "threads/synch.h"
 #include "threads/vaddr.h"
-// #ifdef USERPROG
-#ifdef TEMP
+#ifdef USERPROG
 #include "userprog/process.h"
 #endif
 
@@ -141,8 +140,7 @@ void thread_tick(void) {
   /* Update statistics. */
   if (t == idle_thread)
     idle_ticks++;
-// #ifdef USERPROG
-#ifdef TEMP
+#ifdef USERPROG
   else if (t->pcb != NULL)
     user_ticks++;
 #endif
@@ -514,8 +512,7 @@ void thread_switch_tail(struct thread* prev) {
   /* Start new time slice. */
   thread_ticks = 0;
 
-// #ifdef USERPROG
-#ifdef TEMP
+#ifdef USERPROG
   /* Activate the new address space. */
   process_activate();
 #endif
