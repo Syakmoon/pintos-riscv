@@ -51,6 +51,10 @@ static inline void* pg_round_down(const void* va) { return (void*)((uintptr_t)va
    virtual address space belongs to the kernel. */
 #define PHYS_BASE ((void*)LOADER_PHYS_BASE)
 
+/* This is the base of the kernel. 
+   Memory region lower than this is not available for general usage. */
+#define KERN_BASE ((void*)KERNEL_PHYS_BASE)
+
 /* Returns true if VADDR is a user virtual address. */
 static inline bool is_user_vaddr(const void* vaddr) { return vaddr < PHYS_BASE; }
 
@@ -62,7 +66,7 @@ static inline bool is_kernel_vaddr(const void* vaddr) { return vaddr >= PHYS_BAS
 static inline void* ptov(uintptr_t paddr) {
   ASSERT((void*)paddr < PHYS_BASE);
 
-  return (void*)(paddr + PHYS_BASE);
+  return (void*)(paddr) - KERN_BASE + PHYS_BASE;
 }
 
 /* Returns physical address at which kernel virtual address VADDR
@@ -70,7 +74,7 @@ static inline void* ptov(uintptr_t paddr) {
 static inline uintptr_t vtop(const void* vaddr) {
   ASSERT(is_kernel_vaddr(vaddr));
 
-  return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE;
+  return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE + KERN_BASE;
 }
 
 #endif /* __ASSEMBLER__ */

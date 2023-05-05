@@ -8,6 +8,11 @@
 
 static void invalidate_pagedir(uint32_t*);
 
+#define SATP32_MODE 0x80000000
+#define SATP32_PPN  0x003FFFFF
+
+#define SATP_MODE_SV32 1
+
 /* Creates a new page directory that has mappings for kernel
    virtual addresses, but none for user virtual addresses.
    Returns the new page directory, or a null pointer if memory

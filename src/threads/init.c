@@ -79,7 +79,7 @@ int main(void) {
   bss_init();
 
   /* Break command line into arguments and parse options. */
-  // argv = read_command_line();
+  argv = read_command_line();
   // argv = parse_options(argv);
 
   /* Initialize ourselves as a thread so we can use locks,
@@ -180,6 +180,9 @@ static void paging_init(void) {
 /* Breaks the kernel command line into words and returns them as
    an argv-like array. */
 static char** read_command_line(void) {
+  shutdown_configure(SHUTDOWN_POWER_OFF);
+  scheduler_flags[SCHED_FIFO] = 1;
+  return NULL;
   static char* argv[LOADER_ARGS_LEN / 2 + 1];
   char *p, *end;
   int argc;

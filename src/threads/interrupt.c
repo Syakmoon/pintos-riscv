@@ -275,7 +275,7 @@ void intr_handler(struct intr_frame* frame) {
   /* To keep the context consistent with the original x86 Pintos,
      We do the same things for Supervisor timer interrupt as external ones. */
   s_timer = frame->cause < 0 
-            && (frame->cause & 0xf) == IRQ_S_SOFTWARE;
+            && (frame->cause & 0xf) == IRQ_S_TIMER;
   m_timer = frame->cause < 0 
             && (frame->cause & 0xf) == IRQ_M_TIMER;
   

@@ -11,6 +11,8 @@ extern void mintr_entry();
 void* fdt_ptr;
 
 int main(void) {
+    csr_write(CSR_SATP, 0x7FC00000);
+    void* ssss = csr_read(CSR_SATP);
     intr_init();
     intr_enable();
     for(int a = 0; a < INTMAX_MAX; ++a){
@@ -82,15 +84,15 @@ static void return_to_supervisor() {
     // TEMP: we pretend that timer interrupt won't not happen before mret
     /* Set up the init thread's stack. */
     unsigned long sp_value;
-    asm volatile ("mv %0, sp" : "=r" (sp_value));
+    asm volatile ("mv %0, sp" : "=r" (sp_value) : : "memory");
     sp_value = pg_round_up(sp_value) + PGSIZE;
-    asm volatile("mv sp, %0" : : "r" (sp_value));
+    asm volatile("mv sp, %0" : : "r" (sp_value): "memory");
 
     /* Null-terminate main()'s backtrace. */
     asm volatile("mv ra, %0" : : "r" (0));
 
     /* Pass in the pointer to fdt as the first argument */
-    asm volatile("mv a0, %0" : : "r" (fdt_ptr));
+    asm volatile("mv a0, %0" : : "r" (fdt_ptr): "memory");
 
     mret();
     __builtin_unreachable();    /* Forbids returning. */

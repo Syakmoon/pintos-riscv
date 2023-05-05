@@ -10,6 +10,7 @@
 #define CSR_MEPC		0x341
 #define CSR_MCAUSE		0x342
 #define CSR_MTVAL		0x343
+#define CSR_MIP 0x344
 #define CSR_PMPCFG0		0x3a0
 #define CSR_PMPADDR0		0x3b0
 
@@ -35,6 +36,7 @@
 #define SSTATUS_SIE         0x00000002
 #define SSTATUS_SPIE        0x00000010
 #define SSTATUS_SPP         0x00000100
+#define SSTATUS_SUM         0x00040000
 
 /* PMP configuration register. */
 #define PMP_CFG_R           0x01
@@ -64,7 +66,7 @@
 
 #define wfi()						\
 ({								\
-	asm volatile ("wfi" : : : "memory");  \
+	asm volatile ("wfi");  \
 })
 
 #define mret()						\
@@ -77,10 +79,12 @@
 #define REG_S sw
 #define REG_L lw
 #define REGBYTES 4
+#define TYP w
 #else
 #define REG_S sd
 #define REG_L ld
 #define REGBYTES 8
+#define TYP d
 #endif /* __riscv_xlen */
 #define XSTR(s) STR(s)
 #define STR(s) #s

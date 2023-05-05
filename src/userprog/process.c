@@ -97,8 +97,11 @@ static void start_process(void* file_name_) {
     memset(&if_, 0, sizeof if_);
 
     /* Return to User, enable interrupt later, and turn off interrupt
-       when entering intr_exit. */ 
-    if_.status = (csr_read(CSR_SSTATUS) & ~SSTATUS_SPP & ~SSTATUS_SIE) | SSTATUS_SPIE;
+       when entering intr_exit.
+       If the SUM bit in the sstatus register is set, supervisor mode
+       software may also access pages with U=1. So we also set SUM. */ 
+    if_.status = (csr_read(CSR_SSTATUS) & ~SSTATUS_SPP & ~SSTATUS_SIE)
+                  | SSTATUS_SPIE | SSTATUS_SUM;
 
     success = load(file_name, &if_.epc, &if_.sp);
   }

@@ -7,7 +7,7 @@ SECTIONS
   /* Read-only sections, merged into text segment: */
   __executable_start = 0x08048000 + SIZEOF_HEADERS;
   . = 0x08048000 + SIZEOF_HEADERS;
-  .text : { *(.text) } = 0x90
+  .text : { *(.text) } = 0x13
   .rodata : { *(.rodata) }
 
   /* Adjust the address for the data segment.  We want to adjust up to
