@@ -83,7 +83,7 @@ static void return_to_supervisor() {
     /* Set up the init thread's stack. */
     unsigned long sp_value;
     asm volatile ("mv %0, sp" : "=r" (sp_value));
-    sp_value = pg_round_down(sp_value);
+    sp_value = pg_round_up(sp_value) + PGSIZE;
     asm volatile("mv sp, %0" : : "r" (sp_value));
 
     /* Null-terminate main()'s backtrace. */

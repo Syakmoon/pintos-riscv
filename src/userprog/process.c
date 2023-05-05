@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <riscv.h>
 #include "userprog/pagedir.h"
 #include "filesys/directory.h"
 #include "filesys/file.h"
@@ -21,8 +22,8 @@
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static thread_func start_pthread NO_RETURN;
-static bool load(const char* file_name, void (**eip)(void), void** esp);
-bool setup_thread(void (**eip)(void), void** esp);
+static bool load(const char* file_name, void (**epc)(void), void** sp);
+bool setup_thread(void (**epc)(void), void** sp);
 
 /* Initializes user programs in the system by ensuring the main
    thread has a minimal PCB so that it can execute and wait for
@@ -94,10 +95,12 @@ static void start_process(void* file_name_) {
   /* Initialize interrupt frame and load executable. */
   if (success) {
     memset(&if_, 0, sizeof if_);
-    // if_.gs = if_.fs = if_.es = if_.ds = if_.ss = SEL_UDSEG;
-    // if_.cs = SEL_UCSEG;
-    // if_.eflags = FLAG_IF | FLAG_MBS;
-    // success = load(file_name, &if_.eip, &if_.esp);
+
+    /* Return to User, enable interrupt later, and turn off interrupt
+       when entering intr_exit. */ 
+    if_.status = (csr_read(CSR_SSTATUS) & ~SSTATUS_SPP & ~SSTATUS_SIE) | SSTATUS_SPIE;
+
+    success = load(file_name, &if_.epc, &if_.sp);
   }
 
   /* Handle failure with succesful PCB malloc. Must free the PCB */
@@ -121,9 +124,12 @@ static void start_process(void* file_name_) {
      interrupt, implemented by intr_exit (in
      threads/intr-stubs.S).  Because intr_exit takes all of its
      arguments on the stack in the form of a `struct intr_frame',
-     we just point the stack pointer (%esp) to our stack frame
+     we just point the stack pointer (SP) to our stack frame
      and jump to it. */
-  // asm volatile("movl %0, %%esp; jmp intr_exit" : : "g"(&if_) : "memory");
+  asm volatile("mv t0, %0\n\t"
+               XSTR(REG_S) " t0, 0(sp)\n\t"
+               XSTR(REG_L) " sp, 0(sp)\n\t"
+               "j intr_exit" : : "g"(&if_), "g" (REGBYTES): "memory");
   NOT_REACHED();
 }
 
@@ -257,16 +263,16 @@ struct Elf32_Phdr {
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void** esp);
+static bool setup_stack(void** sp);
 static bool validate_segment(const struct Elf32_Phdr*, struct file*);
 static bool load_segment(struct file* file, off_t ofs, uint8_t* upage, uint32_t read_bytes,
                          uint32_t zero_bytes, bool writable);
 
 /* Loads an ELF executable from FILE_NAME into the current thread.
-   Stores the executable's entry point into *EIP
-   and its initial stack pointer into *ESP.
+   Stores the executable's entry point into *EPC
+   and its initial stack pointer into *SP.
    Returns true if successful, false otherwise. */
-bool load(const char* file_name, void (**eip)(void), void** esp) {
+bool load(const char* file_name, void (**epc)(void), void** sp) {
   struct thread* t = thread_current();
   struct Elf32_Ehdr ehdr;
   struct file* file = NULL;
@@ -346,11 +352,11 @@ bool load(const char* file_name, void (**eip)(void), void** esp) {
   }
 
   /* Set up stack. */
-  if (!setup_stack(esp))
+  if (!setup_stack(sp))
     goto done;
 
   /* Start address. */
-  *eip = (void (*)(void))ehdr.e_entry;
+  *epc = (void (*)(void))ehdr.e_entry;
 
   success = true;
 
@@ -463,7 +469,7 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage, uint32_t 
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
-static bool setup_stack(void** esp) {
+static bool setup_stack(void** sp) {
   uint8_t* kpage;
   bool success = false;
 
@@ -471,7 +477,7 @@ static bool setup_stack(void** esp) {
   if (kpage != NULL) {
     success = install_page(((uint8_t*)PHYS_BASE) - PGSIZE, kpage, true);
     if (success)
-      *esp = PHYS_BASE;
+      *sp = PHYS_BASE;
     else
       palloc_free_page(kpage);
   }
@@ -503,14 +509,14 @@ bool is_main_thread(struct thread* t, struct process* p) { return p->main_thread
 pid_t get_pid(struct process* p) { return (pid_t)p->main_thread->tid; }
 
 /* Creates a new stack for the thread and sets up its arguments.
-   Stores the thread's entry point into *EIP and its initial stack
-   pointer into *ESP. Handles all cleanup if unsuccessful. Returns
+   Stores the thread's entry point into *EPC and its initial stack
+   pointer into *SP. Handles all cleanup if unsuccessful. Returns
    true if successful, false otherwise.
 
    This function will be implemented in Project 2: Multithreading. For
    now, it does nothing. You may find it necessary to change the
    function signature. */
-bool setup_thread(void (**eip)(void) UNUSED, void** esp UNUSED) { return false; }
+bool setup_thread(void (**epc)(void) UNUSED, void** sp UNUSED) { return false; }
 
 /* Starts a new thread with a new user stack running SF, which takes
    TF and ARG as arguments on its user stack. This new thread may be

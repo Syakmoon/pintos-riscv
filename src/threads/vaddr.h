@@ -1,11 +1,15 @@
 #ifndef THREADS_VADDR_H
 #define THREADS_VADDR_H
 
+#ifndef __ASSEMBLER__
+
 #include <debug.h>
 #include <stdint.h>
 #include <stdbool.h>
 
 #include "threads/loader.h"
+
+#endif /* __ASSEMBLER__ */
 
 /* Functions and macros for working with virtual addresses.
 
@@ -20,6 +24,7 @@
 #define PGSIZE (1 << PGBITS)            /* Bytes in a page. */
 #define PGMASK BITMASK(PGSHIFT, PGBITS) /* Page offset bits (0:12). */
 
+#ifndef __ASSEMBLER__
 /* Offset within a page. */
 static inline unsigned pg_ofs(const void* va) { return (uintptr_t)va & PGMASK; }
 
@@ -67,5 +72,7 @@ static inline uintptr_t vtop(const void* vaddr) {
 
   return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE;
 }
+
+#endif /* __ASSEMBLER__ */
 
 #endif /* threads/vaddr.h */

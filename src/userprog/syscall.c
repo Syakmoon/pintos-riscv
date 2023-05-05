@@ -12,10 +12,8 @@ void syscall_init(void) { intr_register_int(EXC_ECALL_U, true, INTR_ON, syscall_
 
 static void syscall_handler(struct intr_frame* f UNUSED) {
   f->epc += 4;
-  unsigned long args0 = ((uint32_t*)f->a0);
-  unsigned long args1 = ((uint32_t*)f->a1);
-  unsigned long args2 = ((uint32_t*)f->a2);
-  unsigned long args3 = ((uint32_t*)f->a3);
+  unsigned long arg0 = ((uint32_t*)f->a0);
+  unsigned long arg1 = ((uint32_t*)f->a1);
 
   /*
    * The following print statement, if uncommented, will print out the syscall
@@ -26,9 +24,9 @@ static void syscall_handler(struct intr_frame* f UNUSED) {
 
   /* printf("System call number: %d\n", args[0]); */
 
-  if (args0 == SYS_EXIT) {
-    f->a0 = args1;
-    // printf("%s: exit(%d)\n", thread_current()->pcb->process_name, args[1]);
-    // process_exit();
+  if (arg0 == SYS_EXIT) {
+    f->a0 = arg1;
+    printf("%s: exit(%d)\n", thread_current()->pcb->process_name, arg1);
+    process_exit();
   }
 }

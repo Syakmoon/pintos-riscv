@@ -5,11 +5,10 @@ ENTRY(start)			/* Kernel starts at "start" symbol. */
 SECTIONS
 {
   MEM_LENGTH = 0x4000000;
-  PROVIDE(__qemu_fdt = LOADER_PHYS_BASE + MEM_LENGTH - 0x200000);
-  PROVIDE(__stack_top = __qemu_fdt);
+  PROVIDE(__stack_top = KERNEL_PHYS_BASE + MEM_LENGTH - 0x200000);
   PROVIDE(__mem_length = MEM_LENGTH);
   /* Specify the kernel base address. */
-  _start = LOADER_PHYS_BASE;
+  _start = KERNEL_PHYS_BASE;
 
   . = _start;
 
@@ -46,6 +45,9 @@ SECTIONS
   _end_bss = .;
 
   _end = .;
+
+  PROVIDE(__kernel_start = _start);
+  PROVIDE(__kernel_end = _end);
 
   ASSERT (_end - _start <= 512K, "Kernel image is too big.")
 }

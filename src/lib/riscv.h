@@ -71,8 +71,8 @@
 ({								\
 	asm volatile ("mret");  \
 })
+#endif /* __ASSEMBLER__ */
 
-#else
 #if __riscv_xlen == 32
 #define REG_S sw
 #define REG_L lw
@@ -82,7 +82,7 @@
 #define REG_L ld
 #define REGBYTES 8
 #endif /* __riscv_xlen */
-
-#endif /* __ASSEMBLER__ */
+#define XSTR(s) STR(s)
+#define STR(s) #s
 
 #endif /* lib/riscv.h */
