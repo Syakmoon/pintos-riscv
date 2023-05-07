@@ -5,7 +5,6 @@ ENTRY(start)			/* Kernel starts at "start" symbol. */
 SECTIONS
 {
   MEM_LENGTH = 0x4000000;
-  PROVIDE(__stack_top = KERNEL_PHYS_BASE + MEM_LENGTH - 0x200000);
   PROVIDE(__mem_length = MEM_LENGTH);
   /* Specify the kernel base address. */
   _start = KERNEL_PHYS_BASE;
@@ -15,22 +14,18 @@ SECTIONS
   /* Kernel starts with code, followed by read-only data and writable data. */
   .init : {
         KEEP (*(SORT_NONE(.init)))
-	      . = ALIGN(0x1000);
   }
   .text : { *(.start) 
-	      . = ALIGN(0x1000);
-        *(.text)
-	      . = ALIGN(0x1000); }
+        *(.text) }
   .rodata : { 
-	      . = ALIGN(0x1000);
+        . = ALIGN(0x1000);
         *(.rodata) *(.rodata.*)
-	      . = ALIGN(0x1000);
+        . = ALIGN(0x1000);
 	      _end_kernel_text = .; }
   .eh_frame : { *(.eh_frame) }
   .data : { 
 	      . = ALIGN(0x1000);
         *(.data)
-	      . = ALIGN(0x1000);
 	    _signature = .; LONG(0xaa55aa55) }
 
   .plt : { 
@@ -38,9 +33,9 @@ SECTIONS
         *(.plt*) }
 
   /* BSS (zero-initialized data) is after everything else. */
+  . = ALIGN(0x1000);
   _start_bss = .;
   .bss : { 
-	      . = ALIGN(0x1000);
         *(.bss) }
   _end_bss = .;
 

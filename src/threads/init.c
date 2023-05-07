@@ -181,7 +181,7 @@ static void paging_init(void) {
    an argv-like array. */
 static char** read_command_line(void) {
   shutdown_configure(SHUTDOWN_POWER_OFF);
-  scheduler_flags[SCHED_FIFO] = 1;
+  active_sched_policy = SCHED_FIFO;
   return NULL;
   static char* argv[LOADER_ARGS_LEN / 2 + 1];
   char *p, *end;

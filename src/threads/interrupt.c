@@ -275,7 +275,7 @@ void intr_handler(struct intr_frame* frame) {
   /* To keep the context consistent with the original x86 Pintos,
      We do the same things for Supervisor timer interrupt as external ones. */
   s_timer = frame->cause < 0 
-            && (frame->cause & 0xf) == IRQ_S_TIMER;
+            && (frame->cause & 0xf) == IRQ_S_SOFTWARE;
   m_timer = frame->cause < 0 
             && (frame->cause & 0xf) == IRQ_M_TIMER;
   
@@ -298,6 +298,16 @@ void intr_handler(struct intr_frame* frame) {
     handler(frame);
   else
     unexpected_interrupt(frame);
+
+  /* We shall not waste 1 clock period in the idle thread.
+     If detect that the EPC is wfi (0x10500073) and we had interrupt enabled,
+     skip to the next instruction.
+     If we are in M-mode, paging is disabled so EPC would not be 
+     a correct address. We must not read *EPC or modify EPC in this case. */
+  if (!m_timer && *((uint32_t*) frame->epc) == 0x10500073 
+      && csr_read(CSR_SSTATUS) & SSTATUS_SPIE) {
+    frame->epc = ((uint32_t) frame->epc) + 4;
+  } 
 
   /* Complete the processing of an external interrupt. */
   if (external || s_timer) {

@@ -376,6 +376,9 @@ static void idle(void* idle_started_ UNUSED) {
 
     /* Re-enable interrupts and wait for the next one.
 
+         Originally:
+         asm volatile("sti; hlt" : : : "memory");
+
          The `sti' instruction disables interrupts until the
          completion of the next instruction, so these two
          instructions are executed atomically.  This atomicity is
@@ -385,8 +388,12 @@ static void idle(void* idle_started_ UNUSED) {
          time.
 
          See [IA32-v2a] "HLT", [IA32-v2b] "STI", and [IA32-v3a]
-         7.11.1 "HLT Instruction". */
-    // asm volatile("sti; hlt" : : : "memory");
+         7.11.1 "HLT Instruction".
+         
+         To keep it consistent with x86 Pintos, we handled this
+         case in intr_handler. */
+      csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SSTATUS_SIE);
+      wfi();
   }
 }
 

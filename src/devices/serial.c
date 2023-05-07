@@ -83,7 +83,7 @@ void serial_init_queue(void) {
     init_poll();
   ASSERT(mode == POLL);
 
-  intr_register_ext(0x20 + 4, serial_interrupt, "serial");
+  intr_register_ext(0xa, serial_interrupt, "serial");
   mode = QUEUE;
   old_level = intr_disable();
   write_ier();
@@ -140,7 +140,7 @@ void serial_notify(void) {
 
 /* Configures the serial port for BPS bits per second. */
 static void set_serial(int bps) {
-  int base_rate = 1843200 / 16;       /* Base rate of 16550A, in Hz. */
+  int base_rate = 0x384000 / 16;      /* Base rate of 16550A, in Hz, by DTB. */
   uint16_t divisor = base_rate / bps; /* Clock rate divisor. */
 
   ASSERT(bps >= 300 && bps <= 115200);

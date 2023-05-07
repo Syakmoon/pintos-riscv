@@ -1,5 +1,6 @@
 #include <riscv.h>
 #include <stdint.h>
+#include <debug.h>
 // #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/vaddr.h"
@@ -11,12 +12,14 @@ extern void mintr_entry();
 void* fdt_ptr;
 
 int main(void) {
-    csr_write(CSR_SATP, 0x7FC00000);
-    void* ssss = csr_read(CSR_SATP);
     intr_init();
     intr_enable();
     for(int a = 0; a < INTMAX_MAX; ++a){
-        // asm volatile("" : : : "memory");
+        intr_disable();
+        for(int b = 0; b < 500000;){
+            ++b;
+        }    // This should be for at least one timer interrupt
+        csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SSTATUS_SIE);
         wfi();
     }
     return 1024;
@@ -117,8 +120,6 @@ void kmain(int hart UNUSED, void* fdt) {
     /* Switch to Supervisor mode. */
     return_to_supervisor();
 
-    /* It should never return to this function.
-       We shall not call NOT_REACHED() because UART is not set up yet. */
-    __builtin_unreachable();
-    wfi();
+    /* It should never return to this function. */
+    NOT_REACHED();
 }

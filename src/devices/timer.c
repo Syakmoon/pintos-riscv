@@ -8,11 +8,8 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
-/* See [8254] for hardware details of the 8254 timer chip. */
+/* See [riscv-priviledge-20211203] 3.2 for hardware details of RISC-V timer. */
 
-#if TIMER_FREQ < 19
-#error 8254 timer requires TIMER_FREQ >= 19
-#endif
 #if TIMER_FREQ > 1000
 #error TIMER_FREQ <= 1000 recommended
 #endif
@@ -38,13 +35,13 @@ void timer_init(void) {
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
 
   intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
-  intr_register_int(IRQ_S_TIMER, false, INTR_ON, timer_interrupt, "Supervisor Timer");
+  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, timer_interrupt, "Supervisor Timer");
     
   /* Enables Machine timer interrupt. */
   csr_write(CSR_MIE, csr_read(CSR_MIE) | INT_MTI);
 
   /* Enables Supervisor timer interrupt. */
-  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_STI);
+  csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SSI);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -141,8 +138,9 @@ static void timer_interrupt(struct intr_frame* args UNUSED) {
   thread_tick();
 
   /* When bit i in sip is writable, a pending interrupt i can be cleared
-     by writing 0 to this bit. */
-  csr_write(CSR_SIP, csr_read(CSR_SIP) & ~(1 << IRQ_S_TIMER));
+     by writing 0 to this bit. Wrting to IRQ_S_TIMER is ignored,
+     so we use IRQ_S_SOFTWARE instead. */
+  csr_write(CSR_SIP, csr_read(CSR_SIP) & ~(1 << IRQ_S_SOFTWARE));
 }
 
 // TODO: enforce this?
@@ -150,8 +148,8 @@ static void timer_interrupt(struct intr_frame* args UNUSED) {
 static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
   *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
 
-  /* We set up STIP so that Supervisor can handler the timer interrupt.  */
-  csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_TIMER));
+  /* We set up SSIP so that Supervisor can handler the timer interrupt.  */
+  csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_SOFTWARE));
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
