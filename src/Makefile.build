@@ -14,8 +14,8 @@ kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 
 # Core kernel.
 threads_SRC  = threads/start.S		# Startup code.
-threads_SRC += threads/kmain.c		# Main program.
-# threads_SRC += threads/init.c		# Main program.
+threads_SRC += threads/kmain.c		# Main program for M-mode.
+threads_SRC += threads/init.c		# Main program.
 threads_SRC += threads/thread.c		# Thread management core.
 threads_SRC += threads/switch.S		# Thread switch routine.
 threads_SRC += threads/interrupt.c	# Interrupt core.
@@ -81,13 +81,16 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
+threads/kernel-gdb.lds.s: CPPFLAGS += -P
+threads/kernel-gdb.lds.s: threads/kernel-gdb.lds.S threads/loader.h
+
 kernel.o: threads/kernel.lds.s $(OBJECTS)
 	$(LD) -T $< -o $@ $(OBJECTS)
 
 # TEMP: Since RISC-V is all PC-relative, guessing this trick will work?
 
-kernel-gdb.o: kernel.o
-	$(OBJCOPY) --change-addresses=+0x40000000 $< $@
+kernel-gdb.o: threads/kernel-gdb.lds.s $(OBJECTS)
+	$(LD) -T $< -o $@ $(OBJECTS)
 
 kernel.bin: kernel-gdb.o kernel.o
 	$(OBJCOPY) -R .note -R .comment -S $(word 2,$^) $@

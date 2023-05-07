@@ -31,10 +31,12 @@ typedef unsigned long long int uint64_t;
 
 #if __riscv_xlen == 32
 typedef int32_t intptr_t;
+typedef int32_t int_t;
 #define INTPTR_MIN INT32_MIN
 #define INTPTR_MAX INT32_MAX
 
 typedef uint32_t uintptr_t;
+typedef uint32_t uint_t;
 #define UINTPTR_MAX UINT32_MAX
 
 #define PTRDIFF_MIN INT32_MIN
@@ -43,10 +45,12 @@ typedef uint32_t uintptr_t;
 #define SIZE_MAX UINT32_MAX
 #else
 typedef int64_t intptr_t;
+typedef int64_t int_t;
 #define INTPTR_MIN INT64_MIN
 #define INTPTR_MAX INT64_MAX
 
 typedef uint64_t uintptr_t;
+typedef uint64_t uint_t;
 #define UINTPTR_MAX UINT64_MAX
 
 #define PTRDIFF_MIN INT64_MIN

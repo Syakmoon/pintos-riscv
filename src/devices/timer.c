@@ -8,7 +8,7 @@
 #include "threads/synch.h"
 #include "threads/thread.h"
 
-/* See [riscv-priviledge-20211203] 3.2 for hardware details of RISC-V timer. */
+/* See [riscv-priviledged-20211203] 3.2 for hardware details of RISC-V timer. */
 
 #if TIMER_FREQ > 1000
 #error TIMER_FREQ <= 1000 recommended
@@ -138,7 +138,7 @@ static void timer_interrupt(struct intr_frame* args UNUSED) {
   thread_tick();
 
   /* When bit i in sip is writable, a pending interrupt i can be cleared
-     by writing 0 to this bit. Wrting to IRQ_S_TIMER is ignored,
+     by writing 0 to this bit.  Wrting to IRQ_S_TIMER is ignored,
      so we use IRQ_S_SOFTWARE instead. */
   csr_write(CSR_SIP, csr_read(CSR_SIP) & ~(1 << IRQ_S_SOFTWARE));
 }

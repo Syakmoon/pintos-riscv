@@ -31,6 +31,7 @@
 #define MSTATUS_MPP         0x00001800
 #define MSTATUS_MPP_S       0x00000800
 #define MSTATUS_FS          0x00006000
+#define MSTATUS_SUM         0x00040000
 
 /* Register sstatus. */
 #define SSTATUS_SIE         0x00000002
@@ -72,6 +73,11 @@
 #define mret()						\
 ({								\
 	asm volatile ("mret");  \
+})
+
+#define sfence_vma()						\
+({								\
+	asm volatile("sfence.vma");  \
 })
 #endif /* __ASSEMBLER__ */
 

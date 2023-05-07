@@ -1,15 +1,17 @@
 #include <riscv.h>
 #include <stdint.h>
 #include <debug.h>
-// #include "threads/init.h"
+#include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/vaddr.h"
+#include "threads/pte.h"
 #include "devices/timer.h"
 
 extern void mintr_entry();
 // extern int main(void);
 
 void* fdt_ptr;
+uintptr_t next_avail_address;
 
 int main(void) {
     intr_init();
@@ -25,9 +27,22 @@ int main(void) {
     return 1024;
 }
 
+/* Clear the "BSS", a segment that should be initialized to
+   zeros.
+
+   The start and end of the BSS segment is recorded by the
+   linker as _start_bss and _end_bss.  See kernel.lds. */
+static void bss_init(void) {
+  extern char _start_bss, _end_bss;
+  memset(&_start_bss, 0, &_end_bss - &_start_bss);
+}
+
 /* Initializes the mstatus register. */
 static void mstatus_init() {
     uintptr_t mstatus = csr_read(CSR_MSTATUS);
+
+    /* Enable SUM to allow accessing user memory in Supervisor. */
+    mstatus |= MSTATUS_SUM;
 
     /* Enable FPU. */
     // mstatus |= MSTATUS_FS;
@@ -57,6 +72,40 @@ static void pmp_init() {
     csr_write(CSR_PMPCFG0, pmpcfg);
 }
 
+/* Populates the base page table and page table with the
+   kernel virtual mapping, and then sets up the CPU to use the
+   new page table.  Points init_page_dir to the page
+   table it creates.
+   This is to ensure that when it enters Supervisor,
+   every kernel address is >= PHYS_BASE */
+static void init_paging(void) {
+  uint_t *pd, *pt;
+  size_t page;
+  size_t megapage_increment = 1 << PTE_PGLEVEL_BITS;
+
+  /* Gets the next page to use. */
+  asm volatile ("mv %0, sp" : "=r" (next_avail_address) : : "memory");
+  next_avail_address = pg_round_up(next_avail_address) + PGSIZE;
+
+  pd = init_page_dir = next_avail_address;
+  memset(pd, 0, PGSIZE);
+  next_avail_address += PGSIZE;
+  pt = NULL;
+  for (page = 0; page < init_ram_pages; page+=megapage_increment) {
+    uintptr_t paddr = page * PGSIZE + KERN_BASE;
+    char* vaddr = ptov(paddr);
+    size_t pde_idx = pd_no(vaddr);
+    pd[pde_idx] = (pg_no(paddr) << PTE_FLAG_BITS) | PTE_R | PTE_W | PTE_X | PTE_V;
+  }
+
+  /* Store the physical address of the page directory into SATP.
+     This activates our new page tables immediately.
+     See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
+     and Protection (satp) Register". */
+  csr_write(CSR_SATP, (1<<31) | pg_no(init_page_dir));
+  sfence_vma();
+}
+
 /* Sets up the Machine trap handler and enables interrupts. */
 static void machine_interrupt_init() {
     uintptr_t mstatus = csr_read(CSR_MSTATUS);
@@ -79,23 +128,25 @@ static void return_to_supervisor() {
 
     csr_write(CSR_MSTATUS, mstatus);
 
-    /* Set MEPC to main to mret to this function. */
-    csr_write(CSR_MEPC, main);
 
     machine_interrupt_init();
 
+    uintptr_t init_stack = ptov(next_avail_address);
+    uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
+    uintptr_t init_main = ptov(main);
+
     // TEMP: we pretend that timer interrupt won't not happen before mret
     /* Set up the init thread's stack. */
-    unsigned long sp_value;
-    asm volatile ("mv %0, sp" : "=r" (sp_value) : : "memory");
-    sp_value = pg_round_up(sp_value) + PGSIZE;
-    asm volatile("mv sp, %0" : : "r" (sp_value): "memory");
+    asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
+
+    /* Pass in the pointer to fdt as the first argument */
+    asm volatile("mv a0, %0" : : "r" (converted_fdt_ptr): "memory");
 
     /* Null-terminate main()'s backtrace. */
     asm volatile("mv ra, %0" : : "r" (0));
 
-    /* Pass in the pointer to fdt as the first argument */
-    asm volatile("mv a0, %0" : : "r" (fdt_ptr): "memory");
+    /* Set MEPC to main to mret to this function. */
+    csr_write(CSR_MEPC, init_main);
 
     mret();
     __builtin_unreachable();    /* Forbids returning. */
@@ -104,17 +155,17 @@ static void return_to_supervisor() {
 /* start.S will jump to this function.
    By default, QEMU sets A0 as hart ID, and A1 as a pointer to FDT. */
 void kmain(int hart UNUSED, void* fdt) {
+    /* Clear BSS. */
+    bss_init();
+
     /* We save the pointer to fdt for main to discover device information. */
     fdt_ptr = fdt;
 
     mstatus_init();
-
-    /* Disable paging. */
-    csr_write(CSR_SATP, 0);
-
     // fp_init();
     delegate_traps();
     pmp_init();
+    init_paging();
     timer_init();
 
     /* Switch to Supervisor mode. */

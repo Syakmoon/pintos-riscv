@@ -40,7 +40,7 @@
 #endif
 
 /* Page directory with kernel mappings only. */
-uint32_t* init_page_dir;
+uint_t* init_page_dir;
 
 #ifdef FILESYS
 /* -f: Format the file system? */
@@ -72,11 +72,8 @@ static void locate_block_device(enum block_type, const char* name);
 #endif
 
 /* Pintos main program. */
-int main(void) {
+int jbmain(void) {
   char** argv;
-
-  /* Clear BSS. */
-  bss_init();
 
   /* Break command line into arguments and parse options. */
   argv = read_command_line();
@@ -132,23 +129,12 @@ int main(void) {
   thread_exit();
 }
 
-/* Clear the "BSS", a segment that should be initialized to
-   zeros.  It isn't actually stored on disk or zeroed by the
-   kernel loader, so we have to zero it ourselves.
-
-   The start and end of the BSS segment is recorded by the
-   linker as _start_bss and _end_bss.  See kernel.lds. */
-static void bss_init(void) {
-  extern char _start_bss, _end_bss;
-  memset(&_start_bss, 0, &_end_bss - &_start_bss);
-}
-
 /* Populates the base page directory and page table with the
    kernel virtual mapping, and then sets up the CPU to use the
    new page directory.  Points init_page_dir to the page
    directory it creates. */
 static void paging_init(void) {
-  uint32_t *pd, *pt;
+  uint_t *pd, *pt;
   size_t page;
   extern char _start, _end_kernel_text;
 
@@ -159,7 +145,7 @@ static void paging_init(void) {
     char* vaddr = ptov(paddr);
     size_t pde_idx = pd_no(vaddr);
     size_t pte_idx = pt_no(vaddr);
-    bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
+    bool in_kernel_text = &_start <= paddr && paddr < &_end_kernel_text;
 
     if (pd[pde_idx] == 0) {
       pt = palloc_get_page(PAL_ASSERT | PAL_ZERO);
@@ -298,7 +284,7 @@ static char** parse_options(char** argv) {
      initial time to a predictable value, not to the local time,
      for reproducibility.  To fix this, give the "-r" option to
      the pintos script to request real-time execution. */
-  random_init(rtc_get_time());
+  // random_init(rtc_get_time());
 
   return argv;
 }
@@ -355,13 +341,13 @@ static void run_actions(char** argv) {
 #ifdef THREADS
       {"rtkt", 2, run_threads_kernel_task},
 #endif
-#ifdef FILESYS
-      {"ls", 1, fsutil_ls},
-      {"cat", 2, fsutil_cat},
-      {"rm", 2, fsutil_rm},
-      {"extract", 1, fsutil_extract},
-      {"append", 2, fsutil_append},
-#endif
+// #ifdef FILESYS
+//       {"ls", 1, fsutil_ls},
+//       {"cat", 2, fsutil_cat},
+//       {"rm", 2, fsutil_rm},
+//       {"extract", 1, fsutil_extract},
+//       {"append", 2, fsutil_append},
+// #endif
       {NULL, 0, NULL},
   };
 

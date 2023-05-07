@@ -7,9 +7,6 @@
 #include <stdint.h>
 
 /* Page directory with kernel mappings only. */
-// extern uint32_t* init_page_dir;
-
-// TEMP: remove this
-static uint32_t* init_page_dir;
+extern uint32_t* init_page_dir;
 
 #endif /* threads/init.h */

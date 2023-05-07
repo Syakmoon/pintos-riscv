@@ -238,7 +238,7 @@ static int plic_claim(void) {
    by writing the interrupt ID it received 
    from the claim to the CLAIM/COMPLETE register. 
    The PLIC does not check whether the completion ID is the same as 
-   the last claim ID for that target. If the completion ID does not match 
+   the last claim ID for that target.  If the completion ID does not match 
    an interrupt source that is currently enabled for the target, 
    the completion is silently ignored.  */
 static void plic_end_of_interrupt(int irq) {

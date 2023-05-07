@@ -80,16 +80,16 @@ void shutdown_power_off(void) {
   const char s[] = "Shutdown";
   const char* p;
 
-// #ifdef FILESYS
-//   filesys_done();
-// #endif
+#ifdef FILESYS
+  filesys_done();
+#endif
 
   print_stats();
 
   printf("Powering off...\n");
   serial_flush();
 
-  /* QEMU RISC-V power-off */
+  /* QEMU RISC-V power-off. */
   outw(0x100000, 0x5555);
 
   /* None of those worked. */
