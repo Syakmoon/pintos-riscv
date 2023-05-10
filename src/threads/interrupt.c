@@ -9,11 +9,13 @@
 #include "threads/io.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/init.h"
+#include "userprog/pagedir.h"
 #include "devices/timer.h"
 
 /* Platform-Level Interrupt Controller (PLIC) MMIO.
    https://github.com/riscv/riscv-plic-spec/blob/master/riscv-plic.adoc */
-#define PLIC             0x0c000000L
+uintptr_t PLIC =         0x0c000000L;
 #define PLIC_PRIORITY    PLIC
 #define PLIC_PENDING     (PLIC + 0x1000)
 #define PLIC_S_ENABLE    (PLIC + 0x2080)
@@ -186,6 +188,8 @@ void intr_yield_on_return(void) {
 
 /* Initializes the PLIC. */
 static void plic_init(void) {
+  PLIC = pagedir_set_mmio(init_page_dir, PLIC, 0x600000, true);
+
   /* Set Supervisor and Machine priority threshold to 0 and 1.
      The PLIC will mask all PLIC interrupts of a priority less than 
      or equal to threshold.

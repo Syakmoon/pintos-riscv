@@ -6,6 +6,8 @@
 #include "devices/timer.h"
 #include "threads/io.h"
 #include "threads/thread.h"
+#include "threads/init.h"
+#include "userprog/pagedir.h"
 #ifdef USERPROG
 #include "userprog/exception.h"
 #endif
@@ -17,8 +19,11 @@
 /* Keyboard control register port. */
 #define CONTROL_REG 0x64
 
+/* Base address for QEMU to control the system. */
+uint8_t* QEMU_TEST_MMIO = 0x100000;
+
 /* How to shut down when shutdown() is called. */
-static enum shutdown_type how = SHUTDOWN_POWER_OFF;
+static enum shutdown_type how = SHUTDOWN_NONE;
 
 static void print_stats(void);
 
@@ -43,7 +48,11 @@ void shutdown(void) {
 
 /* Sets TYPE as the way that machine will shut down when Pintos
    execution is complete. */
-void shutdown_configure(enum shutdown_type type) { how = type; }
+void shutdown_configure(enum shutdown_type type) {
+  if (how == SHUTDOWN_NONE)
+    QEMU_TEST_MMIO = pagedir_set_mmio(init_page_dir, QEMU_TEST_MMIO, 0x1000, true);
+  how = type;
+}
 
 /* Reboots the machine via the keyboard controller. */
 void shutdown_reboot(void) {
@@ -71,7 +80,7 @@ void shutdown_reboot(void) {
   // }
 
   /* QEMU RISC-V reset */
-  outw(0x100000, 0x7777);
+  outw(QEMU_TEST_MMIO, 0x7777);
 }
 
 /* Powers down the machine we're running on,
@@ -90,7 +99,7 @@ void shutdown_power_off(void) {
   serial_flush();
 
   /* QEMU RISC-V power-off. */
-  outw(0x100000, 0x5555);
+  outw(QEMU_TEST_MMIO, 0x5555);
 
   /* None of those worked. */
   printf("still running...\n");

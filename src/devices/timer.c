@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/vaddr.h"
 
 /* See [riscv-priviledged-20211203] 3.2 for hardware details of RISC-V timer. */
 
@@ -35,7 +36,9 @@ void timer_init(void) {
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
 
   intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
-  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, timer_interrupt, "Supervisor Timer");
+
+  // TEMP: move this to Supervisor later
+  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, ptov(timer_interrupt), "Supervisor Timer");
     
   /* Enables Machine timer interrupt. */
   csr_write(CSR_MIE, csr_read(CSR_MIE) | INT_MTI);

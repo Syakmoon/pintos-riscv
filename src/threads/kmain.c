@@ -12,8 +12,16 @@ extern void mintr_entry();
 
 void* fdt_ptr;
 uintptr_t next_avail_address;
+char* thread_names[8] = {"t-min+00", "t-min+08", "t-min+16", "t-min+24",
+                         "t-min+32", "t-min+40", "t-min+48", "t-min+56"};
 
 int main(void) {
+  thread_init();
+  console_init();
+
+  /* Initialize memory system. */
+  palloc_init(SIZE_MAX);
+  malloc_init();
     intr_init();
     intr_enable();
     for(int a = 0; a < INTMAX_MAX; ++a){
@@ -95,7 +103,11 @@ static void init_paging(void) {
     uintptr_t paddr = page * PGSIZE + KERN_BASE;
     char* vaddr = ptov(paddr);
     size_t pde_idx = pd_no(vaddr);
+
+    // TEMP: do not do this after loader is full-fledged
+    size_t pde_idx_identical = pd_no(paddr);
     pd[pde_idx] = (pg_no(paddr) << PTE_FLAG_BITS) | PTE_R | PTE_W | PTE_X | PTE_V;
+    pd[pde_idx_identical] = pd[pde_idx];
   }
 
   /* Store the physical address of the page directory into SATP.
@@ -104,6 +116,10 @@ static void init_paging(void) {
      and Protection (satp) Register". */
   csr_write(CSR_SATP, (1<<31) | pg_no(init_page_dir));
   sfence_vma();
+
+  // TEMP: do not do this after loader is full-fledged
+  /* Relocation. */
+  init_page_dir = ptov(init_page_dir);
 }
 
 /* Sets up the Machine trap handler and enables interrupts. */
@@ -131,7 +147,7 @@ static void return_to_supervisor() {
 
     machine_interrupt_init();
 
-    uintptr_t init_stack = ptov(next_avail_address);
+    uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
     uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
     uintptr_t init_main = ptov(main);
 

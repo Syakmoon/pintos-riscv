@@ -66,7 +66,7 @@ static inline bool is_kernel_vaddr(const void* vaddr) { return vaddr >= PHYS_BAS
 static inline void* ptov(uintptr_t paddr) {
   ASSERT((void*)paddr < PHYS_BASE);
 
-  return (void*)(paddr) - KERN_BASE + PHYS_BASE;
+  return (void*)(paddr - (uintptr_t) KERN_BASE + PHYS_BASE);
 }
 
 /* Returns physical address at which kernel virtual address VADDR
@@ -74,7 +74,7 @@ static inline void* ptov(uintptr_t paddr) {
 static inline uintptr_t vtop(const void* vaddr) {
   ASSERT(is_kernel_vaddr(vaddr));
 
-  return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE + KERN_BASE;
+  return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE + (uintptr_t) KERN_BASE;
 }
 
 #endif /* __ASSEMBLER__ */

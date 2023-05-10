@@ -27,6 +27,9 @@ static void invalidate_pagedir(uint_t*);
 #define SATP_SV SATP_MODE_SV39
 #endif /* __riscv_xlen */
 
+/* After PHYS_BASE, we set 0xf0000000 as the base for MMIO. */
+uintptr_t mmio_next_available = 0xf0000000;
+
 /* Creates a new page directory that has mappings for kernel
    virtual addresses, but none for user virtual addresses.
    Returns the new page directory, or a null pointer if memory
@@ -60,19 +63,16 @@ void pagedir_destroy(uint_t* pd) {
   palloc_free_page(pd);
 }
 
-/* Returns the address of the page table entry for virtual
-   address VADDR in page directory PD.
-   If PD does not have a page table for VADDR, behavior depends
-   on CREATE.  If CREATE is true, then a new page table is
-   created and a pointer into it is returned.  Otherwise, a null
-   pointer is returned. */
-static uint_t* lookup_page(uint_t* pd, const void* vaddr, bool create) {
+/* If GENERAL is false, it also checks if it fits the Pintos kernel-user
+   memory layout. */
+static uint_t* __lookup_page(uint_t* pd, const void* vaddr, bool create, bool general) {
   uint_t *pt, *pde;
 
   ASSERT(pd != NULL);
 
   /* Shouldn't create new kernel virtual mappings. */
-  ASSERT(!create || is_user_vaddr(vaddr));
+  if (!general)
+    ASSERT(!create || is_user_vaddr(vaddr));
 
   /* Check for a page table for VADDR.
      If one is missing, create one if requested. */
@@ -93,10 +93,47 @@ static uint_t* lookup_page(uint_t* pd, const void* vaddr, bool create) {
   return &pt[pt_no(vaddr)];
 }
 
+/* Returns the address of the page table entry for virtual
+   address VADDR in page directory PD.
+   If PD does not have a page table for VADDR, behavior depends
+   on CREATE.  If CREATE is true, then a new page table is
+   created and a pointer into it is returned.  Otherwise, a null
+   pointer is returned. */
+static uint_t* lookup_page(uint_t* pd, const void* vaddr, bool create) {
+  return __lookup_page(pd, vaddr, create, false);
+}
+
+/* If GENERAL is false, it also checks if it fits the Pintos kernel-user
+   memory layout. */
+bool __pagedir_set_page(uint_t* pd, void* vaddr, void* paddr, uint_t rwx, bool general) {
+  uint_t* pte;
+
+  ASSERT(pg_ofs(vaddr) == 0);
+  ASSERT(pg_ofs(paddr) == 0);
+  if (!general) {
+    ASSERT(is_user_vaddr(vaddr));
+    ASSERT(vtop(paddr) >> PTSHIFT < init_ram_pages);
+    ASSERT(pd != init_page_dir);
+  }
+
+  pte = __lookup_page(pd, vaddr, true, general);
+
+  if (pte != NULL) {
+    ASSERT((*pte & PTE_V) == 0);
+    if (!general)
+      *pte = pte_create_user(paddr, rwx);
+    else
+      *pte = pte_create_general(paddr, rwx);
+    sfence_vma();
+    return true;
+  } else
+    return false;
+}
+
 /* Adds a mapping in page directory PD from user virtual page
-   UPAGE to the physical frame identified by kernel virtual
+   VADDR to the physical frame identified by kernel virtual
    address KPAGE.
-   UPAGE must not already be mapped.
+   VADDR must not already be mapped.
    KPAGE should probably be a page obtained from the user pool
    with palloc_get_page().
    RWX will be included as well.
@@ -104,22 +141,7 @@ static uint_t* lookup_page(uint_t* pd, const void* vaddr, bool create) {
    Returns true if successful, false if memory allocation
    failed. */
 bool pagedir_set_page(uint_t* pd, void* upage, void* kpage, uint_t rwx) {
-  uint_t* pte;
-
-  ASSERT(pg_ofs(upage) == 0);
-  ASSERT(pg_ofs(kpage) == 0);
-  ASSERT(is_user_vaddr(upage));
-  ASSERT(vtop(kpage) >> PTSHIFT < init_ram_pages);
-  ASSERT(pd != init_page_dir);
-
-  pte = lookup_page(pd, upage, true);
-
-  if (pte != NULL) {
-    ASSERT((*pte & PTE_V) == 0);
-    *pte = pte_create_user(kpage, rwx);
-    return true;
-  } else
-    return false;
+  return __pagedir_set_page(pd, upage, kpage, rwx, false);
 }
 
 /* Looks up the physical address that corresponds to user virtual
@@ -136,6 +158,31 @@ void* pagedir_get_page(uint_t* pd, const void* uaddr) {
     return pte_get_page(*pte) + pg_ofs(uaddr);
   else
     return NULL;
+}
+
+/* Maps BASE~BASE+SIZE to mmio_next_available~mmio_next_available+BASE,
+   then returns the bottom of that region.
+   WARNING: After the first userprog is set up, DO NOT call this function,
+   or the MMIO region becomes inconsistent among page tables. */
+void* pagedir_set_mmio(uint_t* pd, void* base, size_t size, bool writable) {
+  /* M-mode would never use memory >= PHYS_BASE.
+     We disable page table for M-mode. */
+  void* current_stack;
+  asm volatile ("mv %0, sp" : "=r" (current_stack) : : "memory");
+  if (!is_kernel_vaddr(current_stack)) {
+    return base;
+  }
+
+  void* old = mmio_next_available;
+  size = pg_round_up(size);
+  while (mmio_next_available < ((uintptr_t) old) + size) {
+    uint_t rwx = writable ? PTE_R | PTE_W : PTE_R;
+    ASSERT(__pagedir_set_page(pd, mmio_next_available, (uintptr_t) base, rwx, true));
+    base += PGSIZE;
+    mmio_next_available += PGSIZE;
+    ASSERT(mmio_next_available > 0xf0000000);
+  }
+  return old;
 }
 
 /* Marks user virtual page UPAGE "not present" in page

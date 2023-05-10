@@ -7,6 +7,8 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "threads/init.h"
+#include "userprog/pagedir.h"
 
 /* Register definitions for the 16550A UART used in PCs.
    The 16550A has a lot more going on than shown here, but this
@@ -15,7 +17,7 @@
    Refer to [PC16650D] for hardware information. */
 
 /* I/O port base address for the first serial port. */
-#define IO_BASE 0x10000000L
+uintptr_t IO_BASE = 0x10000000L;
 
 /* DLAB=0 registers. */
 #define RBR_REG (IO_BASE + 0) /* Receiver Buffer Reg. (read-only). */
@@ -65,6 +67,7 @@ static intr_handler_func serial_interrupt;
    been initialized it's all we can do. */
 static void init_poll(void) {
   ASSERT(mode == UNINIT);
+  IO_BASE = pagedir_set_mmio(init_page_dir, 0x10000000, 0x100, true);
   outb(IER_REG, 0);        /* Turn off all interrupts. */
   outb(FCR_REG, 0);        /* Disable FIFO. */
   set_serial(9600);        /* 9.6 kbps, N-8-1. */

@@ -85,6 +85,13 @@ static inline uint_t* pde_get_pt(uint_t pde) {
 }
 
 /* Returns a PTE that points to PAGE.
+   RWX will be included as well. */
+static inline uint_t pte_create_general(void* page, uint_t rwx) {
+  ASSERT(pg_ofs(page) == 0);
+  return (pg_no((void*) page) << PTE_FLAG_BITS) | PTE_V | rwx;
+}
+
+/* Returns a PTE that points to PAGE.
    RWX will be included as well.
    The page will be usable only by Supervisor code (the kernel). */
 static inline uint_t pte_create_kernel(void* page, uint_t rwx) {

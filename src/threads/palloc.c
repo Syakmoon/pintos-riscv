@@ -42,8 +42,8 @@ static bool page_from_pool(const struct pool*, void* page);
    pages are put into the user pool. */
 void palloc_init(size_t user_page_limit) {
   /* Free memory starts at 1 MB and runs to the end of RAM. */
-  uint8_t* free_start = ptov(1024 * 1024);
-  uint8_t* free_end = ptov(init_ram_pages * PGSIZE);
+  uint8_t* free_start = (uintptr_t) ptov(1024 * 1024) + KERN_BASE;
+  uint8_t* free_end = (uintptr_t) ptov(init_ram_pages * PGSIZE) + KERN_BASE;
   size_t free_pages = (free_end - free_start) / PGSIZE;
   size_t user_pages = free_pages / 2;
   size_t kernel_pages;
@@ -139,12 +139,15 @@ static void init_pool(struct pool* p, void* base, size_t page_cnt, const char* n
     PANIC("Not enough memory in %s for bitmap.", name);
   page_cnt -= bm_pages;
 
-  printf("%zu pages available in %s.\n", page_cnt, name);
+  // printf("%zu pages available in %s.\n", page_cnt, name);
 
   /* Initialize the pool. */
   lock_init(&p->lock);
   p->used_map = bitmap_create_in_buf(page_cnt, base, bm_pages * PGSIZE);
   p->base = base + bm_pages * PGSIZE;
+
+  // TEMP: remove this after loader is full-fledged
+  printf("%zu pages available in %s.\n", page_cnt, name);
 }
 
 /* Returns true if PAGE was allocated from POOL,
