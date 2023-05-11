@@ -358,6 +358,8 @@ sub cyl_sectors {
 # If $file_name is undefined, tries to find the default loader.
 # Makes sure that the loader is a reasonable size.
 sub read_loader {
+    # This RISC-V version by passes the x86 loader.
+    return "\0" x 512;
     my ($name) = @_;
     $name = find_file ("loader.bin") if !defined $name;
     die "Cannot find loader\n" if !defined $name;

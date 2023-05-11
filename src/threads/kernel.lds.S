@@ -7,7 +7,7 @@ SECTIONS
   MEM_LENGTH = 0x4000000;
   PROVIDE(__mem_length = MEM_LENGTH);
   /* Specify the kernel base address. */
-  _start = KERNEL_PHYS_BASE;
+  _start = LOADER_PHYS_BASE + 0x30000;
 
   . = _start;
 

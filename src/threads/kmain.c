@@ -1,7 +1,6 @@
 #include <riscv.h>
 #include <stdint.h>
 #include <debug.h>
-#include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/vaddr.h"
 #include "threads/pte.h"
@@ -14,6 +13,9 @@ extern void mintr_entry();
 
 void* fdt_ptr;
 uintptr_t next_avail_address;
+
+/* Different from init.c's copy. */
+uintptr_t* init_page_dir;
 
 int main(void) {
   thread_init();

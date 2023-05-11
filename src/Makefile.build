@@ -2,8 +2,7 @@
 
 SRCDIR = ../..
 
-all: kernel.bin
-# all: kernel.bin loader.bin
+all: kernel.bin loader.bin
 
 include ../../Make.config
 include ../Make.vars
@@ -13,9 +12,7 @@ include ../../tests/Make.tests
 kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 
 # Core kernel.
-threads_SRC  = threads/start.S		# Startup code.
-threads_SRC += threads/kmain.c		# Main program for M-mode.
-threads_SRC += threads/init.c		# Main program.
+threads_SRC = threads/init.c		# Main program.
 threads_SRC += threads/thread.c		# Thread management core.
 threads_SRC += threads/switch.S		# Thread switch routine.
 threads_SRC += threads/interrupt.c	# Interrupt core.
@@ -75,6 +72,33 @@ filesys_SRC += filesys/directory.c	# Directories.
 filesys_SRC += filesys/inode.c		# File headers.
 # filesys_SRC += filesys/fsutil.c		# Utilities.
 
+#
+threads_MSRC  = threads/start.S		# Startup code.
+threads_MSRC += threads/kmain.c		# Main program for M-mode.
+threads_MSRC += threads/interrupt.c	# Interrupt core.
+threads_MSRC += threads/intr-stubs.S	# Interrupt stubs.
+devices_MSRC = devices/timer.c		# Periodic timer device.
+devices_MSRC += devices/serial.c		# Serial port device.
+devices_MSRC += devices/block.c		# Block device abstraction layer.
+devices_MSRC += devices/partition.c	# Partition block device.
+devices_MSRC += devices/virtio-blk.c	# Virtio disk block device.
+devices_MSRC += devices/intq.c		# Interrupt queue.
+devices_MSRC += devices/shutdown.c	# Reboot and power off.
+lib_MSRC  = lib/debug.c			# Debug helpers.
+lib_MSRC += lib/random.c			# Pseudo-random numbers.
+lib_MSRC += lib/stdio.c			# I/O library.
+lib_MSRC += lib/stdlib.c			# Utility functions.
+lib_MSRC += lib/string.c			# String functions.
+lib_MSRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
+lib/kernel_MSRC  = lib/kernel/debug.c	# Debug helpers.
+lib/kernel_MSRC += lib/kernel/list.c	# Doubly-linked lists.
+lib/kernel_MSRC += lib/kernel/console.c	# printf(), putchar().
+userprog_MSRC += userprog/pagedir.c	# Page directories.
+
+MSOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
+MOBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(MSOURCES)))
+MDEPENDS = $(patsubst %.o,%.d,$(MOBJECTS))
+
 SOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
 DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
@@ -82,34 +106,29 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
-threads/kernel-gdb.lds.s: CPPFLAGS += -P
-threads/kernel-gdb.lds.s: threads/kernel-gdb.lds.S threads/loader.h
-
-# This is defined for the loader, or M-mode only.
-kernel.bin: DEFINES += -DMACHINE
+threads/loader.lds.s: threads/loader.lds.S threads/loader.h
 
 kernel.o: threads/kernel.lds.s $(OBJECTS)
 	$(LD) -T $< -o $@ $(OBJECTS)
 
-# TEMP: Since RISC-V is all PC-relative, guessing this trick will work?
+kernel.bin: kernel.o
+	$(OBJCOPY) -R .note -R .comment -S $< $@
 
-kernel-gdb.o: threads/kernel-gdb.lds.s $(OBJECTS)
-	$(LD) -T $< -o $@ $(OBJECTS)
+# This is defined for the loader, or M-mode only.
+loader.bin: DEFINES += -DMACHINE
 
-kernel.bin: kernel-gdb.o kernel.o
-	$(OBJCOPY) -R .note -R .comment -S $(word 2,$^) $@
+loader.o: threads/loader.lds.s $(MOBJECTS)
+	$(LD) -T $< -o $@ $(MOBJECTS)
 
-# threads/loader.o: threads/loader.S
-# 	$(CC) -c $< -o $@ $(ASFLAGS) $(CPPFLAGS) $(DEFINES)
-
-# loader.bin: threads/loader.o
-# 	$(LD) -N -e 0 -Ttext 0x7c00 --oformat binary -o $@ $<
+loader.bin: loader.o
+	$(OBJCOPY) -R .note -R .comment -S $< $@
 
 os.dsk: kernel.bin
 	cat $^ > $@
 
 clean::
 	rm -f $(OBJECTS) $(DEPENDS)
+	# rm -f $(MOBJECTS) $(MDEPENDS)
 	rm -f threads/loader.o threads/kernel.lds.s threads/loader.d
 	rm -f kernel.bin.tmp
 	rm -f kernel.o kernel.lds.s
@@ -121,3 +140,4 @@ Makefile: $(SRCDIR)/Makefile.build
 	cp $< $@
 
 -include $(DEPENDS)
+-include $(MDEPENDS)

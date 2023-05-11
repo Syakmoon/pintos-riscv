@@ -41,6 +41,7 @@
 
 /* Page directory with kernel mappings only. */
 uint_t* init_page_dir;
+uintptr_t init_ram_pages;
 
 #ifdef FILESYS
 /* -f: Format the file system? */

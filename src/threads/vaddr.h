@@ -79,6 +79,7 @@ static inline uintptr_t vtop(const void* vaddr) {
 
 /* This is only for early allocation in M-mode. */
 #ifdef MACHINE
+#include <stddef.h>
 extern uintptr_t next_avail_address;
 static uintptr_t __M_mode_palloc(uintptr_t* next_page_address, size_t cnt) {
   uintptr_t retval = *next_page_address;

@@ -14,7 +14,7 @@ BEGIN { my $self = $0; $self =~ s%/+[^/]*$%%; require "$self/Pintos.pm"; }
 our ($start_time) = time ();
 our ($sim);			# Simulator: bochs, qemu, or player.
 our ($debug) = "none";		# Debugger: none, monitor, or gdb.
-our ($mem) = 4;			# Physical RAM in MB.
+our ($mem) = 64;			# Physical RAM in MB.
 our ($serial) = 1;		# Use serial port for input and output?
 our ($vga);			# VGA output: window, terminal, or none.
 our ($jitter);			# Seed for random timer interrupts, if set.
@@ -612,26 +612,41 @@ sub print_bochs_disk_line {
     }
 }
 
+# put_qemu_disk(@cmd, $disk_name, $num)
+#
+# Looks for a file named $base_name in a couple of likely spots.  If
+# found, returns the name; otherwise, returns undef.
+sub put_qemu_disk {
+    my ($cmd, $disk_name, $num) = @_;
+    push (@$cmd, '-drive', "file=$disk_name,if=none,format=raw,id=x$num");
+    push (@$cmd, '-device', "virtio-blk-device,drive=x$num,bus=virtio-mmio-bus.$num");
+}
+
+
 # Runs QEMU.
 sub run_qemu {
     print "warning: qemu doesn't support --terminal\n"
       if $vga eq 'terminal';
     print "warning: qemu doesn't support jitter\n"
       if defined $jitter;
-    my (@cmd) = ('qemu-system-i386');
-    push (@cmd, '-device', 'isa-debug-exit');
+    my (@cmd) = ('qemu-system-riscv32');
+    push (@cmd, '-machine', 'virt');
 
-    push (@cmd, '-hda', $disks[0]) if defined $disks[0];
-    push (@cmd, '-hdb', $disks[1]) if defined $disks[1];
-    push (@cmd, '-hdc', $disks[2]) if defined $disks[2];
-    push (@cmd, '-hdd', $disks[3]) if defined $disks[3];
     push (@cmd, '-m', $mem);
+    push (@cmd, '-bios', 'none');
     push (@cmd, '-net', 'none');
     push (@cmd, '-nographic') if $vga eq 'none';
     push (@cmd, '-serial', 'stdio') if $serial && $vga ne 'none';
     push (@cmd, '-S') if $debug eq 'monitor';
     push (@cmd, '-s', '-S') if $debug eq 'gdb';
     push (@cmd, '-monitor', 'null') if $vga eq 'none' && $debug eq 'none';
+    push (@cmd, '-kernel', find_file("loader.bin"));
+    push (@cmd, '-global', 'virtio-mmio.force-legacy=false');
+
+    put_qemu_disk(\@cmd, $disks[0], 0) if defined $disks[0];
+    put_qemu_disk(\@cmd, $disks[1], 1) if defined $disks[1];
+    put_qemu_disk(\@cmd, $disks[2], 2) if defined $disks[2];
+    put_qemu_disk(\@cmd, $disks[3], 3) if defined $disks[3];
     run_command (@cmd);
 }
 
