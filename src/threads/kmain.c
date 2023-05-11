@@ -7,6 +7,7 @@
 #include "threads/pte.h"
 #include "devices/timer.h"
 #include "devices/virtio-blk.h"
+#include "devices/block.h"
 
 extern void mintr_entry();
 // extern int main(void);
@@ -46,37 +47,34 @@ static void bss_init(void) {
 
 /* Initializes the mstatus register. */
 static void mstatus_init() {
-    uintptr_t mstatus = csr_read(CSR_MSTATUS);
+  uintptr_t mstatus = csr_read(CSR_MSTATUS);
 
-    /* Enable SUM to allow accessing user memory in Supervisor. */
-    mstatus |= MSTATUS_SUM;
+  /* Enable SUM to allow accessing user memory in Supervisor. */
+  mstatus |= MSTATUS_SUM;
 
-    /* Enable FPU. */
-    // mstatus |= MSTATUS_FS;
-
-    csr_write(CSR_MSTATUS, mstatus);
+  csr_write(CSR_MSTATUS, mstatus);
 }
 
 /* Delegates all interrupts and exceptions to Supervisor. */
 static void delegate_traps() {
-    uintptr_t mideleg = INT_SSI | INT_STI | INT_SEI;
+  uintptr_t mideleg = INT_SSI | INT_STI | INT_SEI;
 
-    /* All exceptions */
-    uintptr_t medeleg = -1UL;
+  /* All exceptions */
+  uintptr_t medeleg = -1UL;
 
-    csr_write(CSR_MIDELEG, mideleg);
-    csr_write(CSR_MEDELEG, medeleg);
+  csr_write(CSR_MIDELEG, mideleg);
+  csr_write(CSR_MEDELEG, medeleg);
 }
 
 /* Sets up the pmp to allow Supervisor to acess all of physical memory. */
 static void pmp_init() {
-    /* If TOR is selected, the associated address register forms 
-       the top of the address range, and the preceding PMP address 
-       register forms the bottom of the address range.
-       We used PMP entry 0 here, so it will match any address y < PMPADDR0. */
-    csr_write(CSR_PMPADDR0, -1UL);
-    uintptr_t pmpcfg = PMP_CFG_A_TOR | PMP_CFG_R | PMP_CFG_W | PMP_CFG_X;
-    csr_write(CSR_PMPCFG0, pmpcfg);
+  /* If TOR is selected, the associated address register forms 
+      the top of the address range, and the preceding PMP address 
+      register forms the bottom of the address range.
+      We used PMP entry 0 here, so it will match any address y < PMPADDR0. */
+  csr_write(CSR_PMPADDR0, -1UL);
+  uintptr_t pmpcfg = PMP_CFG_A_TOR | PMP_CFG_R | PMP_CFG_W | PMP_CFG_X;
+  csr_write(CSR_PMPCFG0, pmpcfg);
 }
 
 /* Populates the base page table and page table with the
@@ -94,7 +92,7 @@ static void init_paging(void) {
   asm volatile ("mv %0, sp" : "=r" (next_avail_address) : : "memory");
   next_avail_address = pg_round_up(next_avail_address) + PGSIZE;
 
-  pd = init_page_dir = __M_mode_alloc(&next_avail_address, 1);
+  pd = init_page_dir = __M_mode_palloc(&next_avail_address, 1);
   pt = NULL;
   for (page = 0; page < init_ram_pages; page+=megapage_increment) {
     uintptr_t paddr = page * PGSIZE + KERN_BASE;
@@ -119,71 +117,81 @@ static void init_paging(void) {
   init_page_dir = ptov(init_page_dir);
 }
 
+static void load_supervisor_kernel(void) {
+  struct block* device;
+  uint8_t buffer[BLOCK_SECTOR_SIZE];
+
+  virtio_blks_init(POLL);
+  device = block_get_by_name("hda");
+  for (block_sector_t i = 0; i < block_size(device); i++) {
+    block_read(device, i, buffer);
+  }
+}
+
 /* Sets up the Machine trap handler and enables interrupts. */
 static void machine_interrupt_init() {
-    uintptr_t mstatus = csr_read(CSR_MSTATUS);
+  uintptr_t mstatus = csr_read(CSR_MSTATUS);
 
-    /* Enable Machine interrupts. */
-    mstatus |= MSTATUS_MIE;
+  /* Enable Machine interrupts. */
+  mstatus |= MSTATUS_MIE;
 
-    csr_write(CSR_MTVEC, mintr_entry);
-    csr_write(CSR_MSTATUS, mstatus);
+  csr_write(CSR_MTVEC, mintr_entry);
+  csr_write(CSR_MSTATUS, mstatus);
 
-    asm volatile ("csrw mscratch, sp");
+  asm volatile ("csrw mscratch, sp");
 }
 
 static void return_to_supervisor() {
-    uintptr_t mstatus = csr_read(CSR_MSTATUS);
+  uintptr_t mstatus = csr_read(CSR_MSTATUS);
 
-    /* Set MPP to Supervisor. */
-    mstatus &= ~MSTATUS_MPP;
-    mstatus |= MSTATUS_MPP_S;
+  /* Set MPP to Supervisor. */
+  mstatus &= ~MSTATUS_MPP;
+  mstatus |= MSTATUS_MPP_S;
 
-    csr_write(CSR_MSTATUS, mstatus);
+  csr_write(CSR_MSTATUS, mstatus);
 
-    machine_interrupt_init();
+  machine_interrupt_init();
 
-    uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
-    uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
-    uintptr_t init_main = ptov(main);
+  uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
+  uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
+  uintptr_t init_main = ptov(main);
 
-    // TEMP: we pretend that timer interrupt won't not happen before mret
-    /* Set up the init thread's stack. */
-    asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
+  // TEMP: we pretend that timer interrupt won't not happen before mret
+  /* Set up the init thread's stack. */
+  asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
 
-    /* Pass in the pointer to fdt as the first argument */
-    asm volatile("mv a0, %0" : : "r" (converted_fdt_ptr): "memory");
+  /* Pass in the pointer to fdt as the first argument */
+  asm volatile("mv a0, %0" : : "r" (converted_fdt_ptr): "memory");
 
-    /* Null-terminate main()'s backtrace. */
-    asm volatile("mv ra, %0" : : "r" (0));
+  /* Null-terminate main()'s backtrace. */
+  asm volatile("mv ra, %0" : : "r" (0));
 
-    /* Set MEPC to main to mret to this function. */
-    csr_write(CSR_MEPC, init_main);
+  /* Set MEPC to main to mret to this function. */
+  csr_write(CSR_MEPC, init_main);
 
-    mret();
-    __builtin_unreachable();    /* Forbids returning. */
+  mret();
+  __builtin_unreachable();    /* Forbids returning. */
 }
 
 /* start.S will jump to this function.
    By default, QEMU sets A0 as hart ID, and A1 as a pointer to FDT. */
 void kmain(int hart UNUSED, void* fdt) {
-    /* Clear BSS. */
-    bss_init();
+  /* Clear BSS. */
+  bss_init();
 
-    /* We save the pointer to fdt for main to discover device information. */
-    fdt_ptr = fdt;
+  /* We save the pointer to fdt for main to discover device information. */
+  fdt_ptr = fdt;
 
-    mstatus_init();
-    // fp_init();
-    delegate_traps();
-    virtio_blks_init(POLL);
-    pmp_init();
-    init_paging();
-    timer_init_machine();
+  mstatus_init();
+  delegate_traps();
+  pmp_init();
+  init_paging();
+  load_supervisor_kernel();
+  timer_init_machine();
 
-    /* Switch to Supervisor mode. */
-    return_to_supervisor();
+  /* Switch to Supervisor mode. */
+  return_to_supervisor();
 
-    /* It should never return to this function. */
-    NOT_REACHED();
+  /* It should never return to this function. */
+  NOT_REACHED();
 }

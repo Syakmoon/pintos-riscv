@@ -79,10 +79,24 @@ static inline uintptr_t vtop(const void* vaddr) {
 
 /* This is only for early allocation in M-mode. */
 #ifdef MACHINE
-static inline uintptr_t __M_mode_alloc(uintptr_t* next_avail_address, size_t cnt) {
-  uintptr_t retval = *next_avail_address;
-  memset((void*) (*next_avail_address), 0, cnt * PGSIZE);
-  *next_avail_address += cnt * PGSIZE;
+extern uintptr_t next_avail_address;
+static uintptr_t __M_mode_palloc(uintptr_t* next_page_address, size_t cnt) {
+  uintptr_t retval = *next_page_address;
+  memset((void*) (*next_page_address), 0, cnt * PGSIZE);
+  *next_page_address += cnt * PGSIZE;
+  return retval;
+}
+
+static uintptr_t __M_mode_malloc(uintptr_t* next_unit_address, size_t sz) {
+  uintptr_t temp_value, retval;
+
+  if (*next_unit_address + sz > pg_round_up((void*) *next_unit_address)) {
+    temp_value = __M_mode_palloc(&next_avail_address, 1);
+    if (temp_value > pg_round_up((void*) *next_unit_address))
+      *next_unit_address = temp_value;
+  }
+  retval = *next_unit_address;
+  *next_unit_address += sz;
   return retval;
 }
 #endif

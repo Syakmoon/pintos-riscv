@@ -57,7 +57,7 @@
 #define VIRTIO_F_EVENT_IDX     (1 << 29)  /* used_event and avail_event. */
 
 /* Configuration space. */
-#define reg_conf(DEV) ((DEV)->reg_base + 0x0a4) /* The address. */
+#define reg_conf(DEV) ((DEV)->reg_base + 0x100) /* The address. */
 #define conf_cap(DEV) (reg_conf(DEV) + 0x000)   /* Disk capacity. */
 
 /* The size of virtqueue. Must be a power of 2. */
@@ -128,12 +128,6 @@ struct virtio_blk_resp {
   uint8_t status;
 };
 
-/* QEMU's RISC-V emulation supports 8 virtio devices.
-   Although x86 Pintos supports only up to 4 hard disks,
-   in case we want to add more virtio devices, we can still assume 8 devices. */
-#define VIRTIO_CNT 16
-#define VIRTIO_MMIO_PHYS_START 0x10001000L
-
 /* A virtio block device. */
 struct virtio_blk {
   struct virtq_desc* desc;  /* Descriptor table. */
@@ -141,8 +135,8 @@ struct virtio_blk {
   struct virtq_used* used;  /* Used ring. */
 
   /* All requests created in memory to avoid using the heap. */
-  struct virtio_blk_req req[VIRTIO_CNT];
-  struct virtio_blk_resp resp[VIRTIO_CNT];
+  struct virtio_blk_req req[QUEUE_SIZE];
+  struct virtio_blk_resp resp[QUEUE_SIZE];
 
   uint16_t last_seen_used;  /* The index of the used ring we saw last time. */
   uint16_t next_desc_idx;   /* The next index in the descriptor table to use. */
@@ -162,11 +156,12 @@ struct virtio_blk {
   bool is_blk;              /* Is device a virtio block device? */
 };
 
+/* QEMU's RISC-V emulation supports 8 virtio devices.
+   Although x86 Pintos supports only up to 4 hard disks,
+   in case we want to add more virtio devices, we can still assume 8 devices. */
+#define VIRTIO_CNT 8
 static struct virtio_blk blks[VIRTIO_CNT];
-
-#ifdef MACHINE
-extern uintptr_t next_avail_address;
-#endif
+#define VIRTIO_MMIO_PHYS_START 0x10001000L
 
 /* Set of features we would NOT use in M-mode. */
 static const uint32_t M_excluded_features = VIRTIO_F_CONFIG_WCE |
@@ -247,6 +242,7 @@ void virtio_blk_init(struct virtio_blk* blk, enum virtio_blk_mode mode) {
     8. Set the DRIVER_OK status bit. At this point the device is “live”. */
   reset_device(blk);
 
+  status = 0;
   outl(reg_status(blk), status |= STA_ACK);
 
   outl(reg_status(blk), status |= STA_DRV);
@@ -272,8 +268,6 @@ void virtio_blk_init(struct virtio_blk* blk, enum virtio_blk_mode mode) {
 
 /* Initialize the disk subsystem and detect disks. */
 void virtio_blks_init(enum virtio_blk_mode mode) {
-  // block_register("USELESS", BLOCK_RAW, NULL, 0, &NOP, NULL);
-  // return;
   size_t dev_no;
 
   ASSERT(sizeof(struct virtio_blk_resp) == 1);
@@ -363,7 +357,7 @@ static void identify_virtio_device(struct virtio_blk* d) {
   if (capacity >= 1024 * 1024 * 1024 / BLOCK_SECTOR_SIZE) {
     #ifndef MACHINE
     printf("%s: ignoring ", d->name);
-    print_human_readable_size(capacity * 512);
+    print_human_readable_size(capacity * BLOCK_SECTOR_SIZE);
     printf("disk for safety\n");
     #endif
     d->is_blk = false;
@@ -371,7 +365,8 @@ static void identify_virtio_device(struct virtio_blk* d) {
   }
 
   /* Register. */
-  block = block_register(d->name, BLOCK_RAW, extra_info, capacity, &virtio_operations, d);
+  block = block_register(d->name, BLOCK_RAW, extra_info,
+                        capacity, &virtio_operations, d);
   partition_scan(block);
 }
 
@@ -396,12 +391,12 @@ static void dma_alloc(struct virtio_blk* blk) {
   rw_size = pg_round_up(desc_sz + avail_sz);
   used_sz = pg_round_up(used_sz);
   #ifdef MACHINE
-  blk->desc = __M_mode_alloc(&next_avail_address, rw_size << PGBITS);
-  blk->avail = blk->desc + desc_sz;
-  blk->used = __M_mode_alloc(&next_avail_address, used_sz << PGBITS);
+  blk->desc = __M_mode_palloc(&next_avail_address, rw_size >> PGBITS);
+  blk->avail = ((uintptr_t) blk->desc) + desc_sz;
+  blk->used = __M_mode_palloc(&next_avail_address, used_sz >> PGBITS);
   #else
   blk->desc = palloc_get_multiple(PAL_ASSERT | PAL_ZERO, rw_size >> PGBITS);
-  blk->avail = blk->desc + desc_sz;
+  blk->avail = ((uintptr_t) blk->desc) + desc_sz;
   blk->used = palloc_get_multiple(PAL_ASSERT | PAL_ZERO, used_sz >> PGBITS);
   #endif
 }
@@ -423,6 +418,7 @@ static void virtqueue_setup(struct virtio_blk* blk) {
         register pairs.
      7. Write 0x1 to QueueReady. */
   uint32_t queue_num_max;
+  bool bit32 = sizeof(uintptr_t) == 4;
 
   outl(reg_queue_sel(blk), 0);
 
@@ -441,12 +437,13 @@ static void virtqueue_setup(struct virtio_blk* blk) {
 
   outl(reg_queue_num(blk), QUEUE_SIZE);
 
+  /* The result of shifting by more than its bit width is undefined. */
   outl(reg_desc_low(blk), (uint32_t) (((uintptr_t) blk->desc) & UINT32_MAX));
-  outl(reg_desc_high(blk), (uint32_t) (((uintptr_t) blk->desc) >> 32));
+  outl(reg_desc_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->desc) >> 32));
   outl(reg_drv_low(blk), (uint32_t) (((uintptr_t) blk->avail) & UINT32_MAX));
-  outl(reg_drv_high(blk), (uint32_t) (((uintptr_t) blk->avail) >> 32));
+  outl(reg_drv_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->avail) >> 32));
   outl(reg_dev_low(blk), (uint32_t) (((uintptr_t) blk->used) & UINT32_MAX));
-  outl(reg_dev_high(blk), (uint32_t) (((uintptr_t) blk->used) >> 32));
+  outl(reg_dev_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->used) >> 32));
 
   outl(reg_queue_ready(blk), 0x1);
 }
@@ -488,16 +485,16 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
   memset(req, 0, sizeof(struct virtio_blk_req));
   req->type = write ? VIRTIO_BLK_T_OUT : VIRTIO_BLK_T_IN;
   req->sector = sec_no;
-  write_desc(&d->desc[desc_idx], (uint64_t) req, sizeof(struct virtio_blk_req),
+  write_desc(&d->desc[desc_idx], ((uintptr_t) req) & SIZE_MAX, sizeof(struct virtio_blk_req),
             VIRTQ_DESC_F_NEXT, desc_idx = (desc_idx + 1) % QUEUE_SIZE);
   
   /* Our request body. */
-  write_desc(&d->desc[desc_idx], buffer, BLOCK_SECTOR_SIZE,
-            VIRTQ_DESC_F_NEXT | write ? VIRTQ_DESC_F_WRITE : 0,
+  write_desc(&d->desc[desc_idx], ((uintptr_t) buffer) & SIZE_MAX, BLOCK_SECTOR_SIZE,
+            VIRTQ_DESC_F_NEXT | (write ? 0 : VIRTQ_DESC_F_WRITE),
             desc_idx = (desc_idx + 1) % QUEUE_SIZE);
   
   /* Device response. */
-  write_desc(&d->desc[desc_idx], &d->resp[desc_idx],
+  write_desc(&d->desc[desc_idx], ((uintptr_t) &d->resp[desc_idx]) & SIZE_MAX,
             sizeof(struct virtio_blk_resp), VIRTQ_DESC_F_WRITE, 0);
 
   /* From [virtio-v1.2] 2.7.13 "Supplying Buffers to The Device":
@@ -534,7 +531,7 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
     ASSERT(receive_pending(d));
   }
   else
-    while(receive_pending(d));
+    while(!receive_pending(d));
   
   /* We only recycle our earlier buffer here. */
   id = d->used->ring[d->last_seen_used % QUEUE_SIZE].id;
@@ -580,7 +577,7 @@ static void write_desc(struct virtq_desc* desc, uint64_t addr, uint32_t len,
   desc->addr = addr;
   desc->len = len;
   desc->flags = flags;
-  desc->addr = next;
+  desc->next = next;
 }
 
 /* Allocate CNT descriptors for disk D.

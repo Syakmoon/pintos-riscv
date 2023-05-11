@@ -6,6 +6,11 @@
 #include "devices/block.h"
 #include "threads/malloc.h"
 
+#ifdef MACHINE
+#include "threads/vaddr.h"
+uintptr_t M_partition_next = 0;
+#endif
+
 /* A partition of a block device. */
 struct partition {
   struct block* block;  /* Underlying block device. */
@@ -72,9 +77,14 @@ static void read_partition_table(struct block* block, block_sector_t sector,
 
   /* Read sector. */
   ASSERT(sizeof *pt == BLOCK_SECTOR_SIZE);
+  #ifndef MACHINE
   pt = malloc(sizeof *pt);
   if (pt == NULL)
     PANIC("Failed to allocate memory for partition table.");
+  #else
+  struct partition_table local_pt;
+  pt = &local_pt;
+  #endif
   block_read(block, 0, pt);
 
   /* Check signature. */
@@ -84,7 +94,9 @@ static void read_partition_table(struct block* block, block_sector_t sector,
     else
       printf("%s: Invalid extended partition table in sector %" PRDSNu "\n", block_name(block),
              sector);
+    #ifndef MACHINE
     free(pt);
+    #endif
     return;
   }
 
@@ -121,7 +133,9 @@ static void read_partition_table(struct block* block, block_sector_t sector,
     }
   }
 
+  #ifndef MACHINE
   free(pt);
+  #endif
 }
 
 /* We have found a primary or logical partition of the given TYPE
@@ -149,9 +163,13 @@ static void found_partition(struct block* block, uint8_t part_type, block_sector
     char extra_info[128];
     char name[16];
 
+    #ifndef MACHINE
     p = malloc(sizeof *p);
     if (p == NULL)
       PANIC("Failed to allocate memory for partition descriptor");
+    #else
+    p = __M_mode_malloc(&M_partition_next, sizeof *p);
+    #endif
     p->block = block;
     p->start = start;
 

@@ -6,7 +6,7 @@
 
 #ifdef MACHINE
 #include "threads/vaddr.h"
-extern uintptr_t next_avail_address;
+uintptr_t M_block_next = 0;
 #endif
 
 /* A block device. */
@@ -148,8 +148,7 @@ struct block* block_register(const char* name, enum block_type type, const char*
   #ifndef MACHINE
   struct block* block = malloc(sizeof *block);
   #else
-  struct block* block = __M_mode_alloc(&next_avail_address,
-                            (uintptr_t) pg_round_up(sizeof *block) >> PGBITS);
+  struct block* block = __M_mode_malloc(&M_block_next, sizeof *block);
   #endif
   if (block == NULL)
     PANIC("Failed to allocate memory for block device descriptor");
