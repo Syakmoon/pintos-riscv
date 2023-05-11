@@ -77,6 +77,16 @@ static inline uintptr_t vtop(const void* vaddr) {
   return (uintptr_t)vaddr - (uintptr_t)PHYS_BASE + (uintptr_t) KERN_BASE;
 }
 
+/* This is only for early allocation in M-mode. */
+#ifdef MACHINE
+static inline uintptr_t __M_mode_alloc(uintptr_t* next_avail_address, size_t cnt) {
+  uintptr_t retval = *next_avail_address;
+  memset((void*) (*next_avail_address), 0, cnt * PGSIZE);
+  *next_avail_address += cnt * PGSIZE;
+  return retval;
+}
+#endif
+
 #endif /* __ASSEMBLER__ */
 
 #endif /* threads/vaddr.h */

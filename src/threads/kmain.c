@@ -6,14 +6,13 @@
 #include "threads/vaddr.h"
 #include "threads/pte.h"
 #include "devices/timer.h"
+#include "devices/virtio-blk.h"
 
 extern void mintr_entry();
 // extern int main(void);
 
 void* fdt_ptr;
 uintptr_t next_avail_address;
-char* thread_names[8] = {"t-min+00", "t-min+08", "t-min+16", "t-min+24",
-                         "t-min+32", "t-min+40", "t-min+48", "t-min+56"};
 
 int main(void) {
   thread_init();
@@ -95,9 +94,7 @@ static void init_paging(void) {
   asm volatile ("mv %0, sp" : "=r" (next_avail_address) : : "memory");
   next_avail_address = pg_round_up(next_avail_address) + PGSIZE;
 
-  pd = init_page_dir = next_avail_address;
-  memset(pd, 0, PGSIZE);
-  next_avail_address += PGSIZE;
+  pd = init_page_dir = __M_mode_alloc(&next_avail_address, 1);
   pt = NULL;
   for (page = 0; page < init_ram_pages; page+=megapage_increment) {
     uintptr_t paddr = page * PGSIZE + KERN_BASE;
@@ -144,7 +141,6 @@ static void return_to_supervisor() {
 
     csr_write(CSR_MSTATUS, mstatus);
 
-
     machine_interrupt_init();
 
     uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
@@ -180,9 +176,10 @@ void kmain(int hart UNUSED, void* fdt) {
     mstatus_init();
     // fp_init();
     delegate_traps();
+    virtio_blks_init(POLL);
     pmp_init();
     init_paging();
-    timer_init();
+    timer_init_machine();
 
     /* Switch to Supervisor mode. */
     return_to_supervisor();

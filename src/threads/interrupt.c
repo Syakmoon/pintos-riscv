@@ -154,18 +154,7 @@ void intr_register_ext(uint8_t vec_no, intr_handler_func* handler, const char* n
 }
 
 /* Registers internal interrupt VEC_NO to invoke HANDLER, which
-   is named NAME for debugging purposes.  The interrupt handler
-   will be invoked with interrupt status LEVEL.
-
-   The handler will have descriptor privilege level DPL, meaning
-   that it can be invoked intentionally when the processor is in
-   the DPL or lower-numbered ring.  In practice, DPL==3 allows
-   user mode to invoke the interrupts and DPL==0 prevents such
-   invocation.  Faults and exceptions that occur in user mode
-   still cause interrupts with DPL==0 to be invoked.  See
-   [IA32-v3a] sections 4.5 "Privilege Levels" and 4.8.1.1
-   "Accessing Nonconforming Code Segments" for further
-   discussion. */
+   is named NAME for debugging purposes. */
 void intr_register_int(uint8_t vec_no, bool exception, enum intr_level level, intr_handler_func* handler,
                        const char* name) {
   register_handler(vec_no, exception, level, handler, name);
@@ -267,6 +256,7 @@ static inline bool is_trap_from_userspace(struct intr_frame* frame) {
    interrupted thread's registers. */
 void intr_handler(struct intr_frame* frame) {
   bool external, s_timer, m_timer;
+  long old_cause;
   intr_handler_func* handler;
 
   /* External interrupts are special.
@@ -296,12 +286,22 @@ void intr_handler(struct intr_frame* frame) {
 
   uint8_t vec_no = cause_to_vec_no(frame->cause);
 
+  /* For interrupt handler to use its IRQ.
+     We can actually not restore CAUSE, but this is just in case. */
+  if (external) {
+    old_cause = frame->cause;
+    frame->cause -= EXTERNAL_OFFSET;
+  }
+
   /* Invoke the interrupt's handler. */
   handler = intr_handlers[vec_no];
   if (handler != NULL)
     handler(frame);
   else
     unexpected_interrupt(frame);
+  
+  if (external)
+    frame->cause = old_cause;
 
   /* We shall not waste 1 clock period in the idle thread.
      If detect that the EPC is wfi (0x10500073) and we had interrupt enabled,

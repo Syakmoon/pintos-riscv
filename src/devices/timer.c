@@ -5,7 +5,6 @@
 #include <stdio.h>
 #include <riscv.h>
 #include "threads/interrupt.h"
-#include "threads/synch.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
 
@@ -29,22 +28,37 @@ static void busy_wait(int64_t loops);
 static void real_time_sleep(int64_t num, int32_t denom);
 static void real_time_delay(int64_t num, int32_t denom);
 
+#ifdef MACHINE
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
-   and registers the corresponding interrupt. */
-void timer_init(void) {
+   and registers the corresponding Machine interrupt. */
+void timer_init_machine(void) {
   /* Set Machine timer to the next interval. */
   *(uint64_t*) CLINT_MTIMECMP += *(uint64_t*) CLINT_MTIME + TIMER_INTERVAL;
 
   intr_register_int(IRQ_M_TIMER, false, INTR_ON, timer_interrupt_machine, "Machine Timer");
-
-  // TEMP: move this to Supervisor later
-  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, ptov(timer_interrupt), "Supervisor Timer");
     
   /* Enables Machine timer interrupt. */
   csr_write(CSR_MIE, csr_read(CSR_MIE) | INT_MTI);
+}
 
+// TODO: enforce this?
+/* Machine timer interrupt handler. */
+static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
+  *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
+
+  /* We set up SSIP so that Supervisor can handler the timer interrupt.  */
+  csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_SOFTWARE));
+}
+
+#endif
+
+/* Registers the corresponding Supervisor interrupt. */
+void timer_init(void) {
   /* Enables Supervisor timer interrupt. */
   csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SSI);
+
+  /* Set Machine timer to the next interval. */
+  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, ptov(timer_interrupt), "Supervisor Timer");
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -144,15 +158,6 @@ static void timer_interrupt(struct intr_frame* args UNUSED) {
      by writing 0 to this bit.  Wrting to IRQ_S_TIMER is ignored,
      so we use IRQ_S_SOFTWARE instead. */
   csr_write(CSR_SIP, csr_read(CSR_SIP) & ~(1 << IRQ_S_SOFTWARE));
-}
-
-// TODO: enforce this?
-/* Machine timer interrupt handler. */
-static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
-  *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
-
-  /* We set up SSIP so that Supervisor can handler the timer interrupt.  */
-  csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_SOFTWARE));
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

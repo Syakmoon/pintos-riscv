@@ -2,8 +2,12 @@
 #include <list.h>
 #include <string.h>
 #include <stdio.h>
-#include "devices/ide.h"
 #include "threads/malloc.h"
+
+#ifdef MACHINE
+#include "threads/vaddr.h"
+extern uintptr_t next_avail_address;
+#endif
 
 /* A block device. */
 struct block {
@@ -141,7 +145,12 @@ void block_print_stats(void) {
    will be passed AUX in each function call. */
 struct block* block_register(const char* name, enum block_type type, const char* extra_info,
                              block_sector_t size, const struct block_operations* ops, void* aux) {
+  #ifndef MACHINE
   struct block* block = malloc(sizeof *block);
+  #else
+  struct block* block = __M_mode_alloc(&next_avail_address,
+                            (uintptr_t) pg_round_up(sizeof *block) >> PGBITS);
+  #endif
   if (block == NULL)
     PANIC("Failed to allocate memory for block device descriptor");
 
@@ -154,12 +163,14 @@ struct block* block_register(const char* name, enum block_type type, const char*
   block->read_cnt = 0;
   block->write_cnt = 0;
 
+  #ifndef MACHINE
   printf("%s: %'" PRDSNu " sectors (", block->name, block->size);
   print_human_readable_size((uint64_t)block->size * BLOCK_SECTOR_SIZE);
   printf(")");
   if (extra_info != NULL)
     printf(", %s", extra_info);
   printf("\n");
+  #endif
 
   return block;
 }

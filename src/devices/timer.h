@@ -18,6 +18,7 @@
 #define TIMER_INTERVAL QEMU_FREQ / TIMER_FREQ  // TODO: change to some other approaches
 
 void timer_init(void);
+void timer_init_machine(void);
 void timer_calibrate(void);
 
 int64_t timer_ticks(void);

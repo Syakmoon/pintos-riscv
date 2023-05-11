@@ -85,6 +85,9 @@ threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 threads/kernel-gdb.lds.s: CPPFLAGS += -P
 threads/kernel-gdb.lds.s: threads/kernel-gdb.lds.S threads/loader.h
 
+# This is defined for the loader, or M-mode only.
+kernel.bin: DEFINES += -DMACHINE
+
 kernel.o: threads/kernel.lds.s $(OBJECTS)
 	$(LD) -T $< -o $@ $(OBJECTS)
 

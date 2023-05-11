@@ -1,6 +1,9 @@
 #ifndef DEVICES_VIRTIO_BLK_H
 #define DEVICES_VIRTIO_BLK_H
 
-void virtio_blk_init(void);
+/* Transmission mode. */
+enum virtio_blk_mode { POLL, INTERRUPT };
 
-#endif /* devices/virtio-bkl.h */
+void virtio_blks_init(enum virtio_blk_mode mode);
+
+#endif /* devices/virtio-blk.h */
