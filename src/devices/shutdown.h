@@ -3,6 +3,9 @@
 
 #include <debug.h>
 
+/* Base address for QEMU to control the system. */
+#define QEMU_TEST_MMIO 0x100000
+
 /* How to shut down when Pintos has nothing left to do. */
 enum shutdown_type {
   SHUTDOWN_NONE,      /* Loop forever. */

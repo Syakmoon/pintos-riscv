@@ -30,12 +30,10 @@ void debug_backtrace(void) {
 
 #ifdef MACHINE
 void debug_panic(const char* file, int line, const char* function, const char* message, ...) {
-  serial_flush();
   shutdown();
   for (;;)
     ;
 }
-
 #endif
 
 #pragma GCC diagnostic pop

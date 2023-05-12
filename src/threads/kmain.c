@@ -8,19 +8,18 @@
 #include "devices/virtio-blk.h"
 #include "devices/block.h"
 #include "devices/serial.h"
+#include "devices/shutdown.h"
+#include "userprog/pagedir.h"
 
 extern void mintr_entry();
-// extern int main(void);
 
 void* fdt_ptr;
+size_t init_ram_pages;
 uintptr_t next_avail_address;
+uintptr_t kernel_position;
 
 /* Different from init.c's copy. */
 uintptr_t* init_page_dir;
-
-int main(void) {
-  return 1024;
-}
 
 /* Clear the "BSS", a segment that should be initialized to
    zeros.
@@ -75,6 +74,8 @@ static void init_paging(void) {
   size_t page;
   size_t megapage_increment = 1 << PTE_PGLEVEL_BITS;
 
+  init_ram_pages = MEM_LENGTH >> PGBITS;
+
   /* Gets the next page to use. */
   asm volatile ("mv %0, sp" : "=r" (next_avail_address) : : "memory");
   next_avail_address = pg_round_up(next_avail_address) + PGSIZE;
@@ -92,7 +93,13 @@ static void init_paging(void) {
     pd[pde_idx_identical] = pd[pde_idx];
   }
 
-  /* Store the physical address of the page directory into SATP.
+  /* Sets up a mapped page for serial and shutdown in the MMIO region. */
+  pt = __M_mode_palloc(&next_avail_address, 1);
+  pt[0] = (pg_no(SERIAL_MMIO_BASE) << PTE_FLAG_BITS) | PTE_R | PTE_W | PTE_V;
+  pt[1] = (pg_no(QEMU_TEST_MMIO) << PTE_FLAG_BITS) | PTE_R | PTE_W | PTE_V;
+  pd[pd_no(MMIO_START)] = (pg_no(pt) << PTE_FLAG_BITS) | PTE_V;
+
+  /* Stores the physical address of the page directory into SATP.
      This activates our new page tables immediately.
      See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
      and Protection (satp) Register". */
@@ -106,12 +113,27 @@ static void init_paging(void) {
 
 static void load_supervisor_kernel(void) {
   struct block* device;
+  uintptr_t position;
   uint8_t buffer[BLOCK_SECTOR_SIZE];
 
   virtio_blks_init(POLL);
+  ASSERT(next_avail_address <=
+        KERNEL_PHYS_BASE + LOADER_KERN_BASE - (uintptr_t) PHYS_BASE);
+  kernel_position = KERNEL_PHYS_BASE + LOADER_KERN_BASE;
+
+  /* To support reading arguments passed in by the Pintos program. */
   device = block_get_by_name("hda");
-  for (block_sector_t i = 0; i < block_size(device); i++) {
-    block_read(device, i, buffer);
+  block_read(device, 0, kernel_position - BLOCK_SECTOR_SIZE);
+
+  while(block_type(device) != BLOCK_KERNEL) {
+    device = block_next(device);
+    ASSERT(device != NULL);
+  }
+
+  /* Load the kernel ELF file. */
+  for (block_sector_t i = 0; i < block_size(device); ++i) {
+    block_read(device, i, kernel_position);
+    kernel_position += BLOCK_SECTOR_SIZE;
   }
 }
 
@@ -141,14 +163,18 @@ static void return_to_supervisor() {
 
   uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
   uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
-  uintptr_t init_main = ptov(main);
+  uintptr_t init_main = KERNEL_PHYS_BASE + LOADER_KERN_BASE + 0x18;
+  init_main = *(uintptr_t*) init_main;
 
   // TEMP: we pretend that timer interrupt won't not happen before mret
   /* Set up the init thread's stack. */
   asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
 
-  /* Pass in the pointer to fdt as the first argument */
+  /* Pass in the pointer to fdt as the first argument. */
   asm volatile("mv a0, %0" : : "r" (converted_fdt_ptr): "memory");
+
+  /* Pass in the number of ram pages in the second argument. */
+  asm volatile("mv a1, %0" : : "r" (init_ram_pages): "memory");
 
   /* Null-terminate main()'s backtrace. */
   asm volatile("mv ra, %0" : : "r" (0));
@@ -165,7 +191,6 @@ static void return_to_supervisor() {
 void kmain(int hart UNUSED, void* fdt) {
   /* Clear BSS. */
   bss_init();
-  putc_poll('b');
 
   /* We save the pointer to fdt for main to discover device information. */
   fdt_ptr = fdt;
@@ -174,6 +199,7 @@ void kmain(int hart UNUSED, void* fdt) {
   delegate_traps();
   pmp_init();
   init_paging();
+  init_poll();
   load_supervisor_kernel();
   timer_init_machine();
 

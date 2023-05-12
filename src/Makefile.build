@@ -13,9 +13,7 @@ kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 loader.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 
 # Core kernel.
-threads_SRC  = threads/start.S		# Startup code.
-threads_SRC += threads/kmain.c		# Main program for M-mode.
-threads_SRC += threads/init.c		# Main program.
+threads_SRC = threads/init.c		# Main program.
 threads_SRC += threads/thread.c		# Thread management core.
 threads_SRC += threads/switch.S		# Thread switch routine.
 threads_SRC += threads/interrupt.c	# Interrupt core.
@@ -75,7 +73,7 @@ filesys_SRC += filesys/directory.c	# Directories.
 filesys_SRC += filesys/inode.c		# File headers.
 # filesys_SRC += filesys/fsutil.c		# Utilities.
 
-#
+# Machine mode code.
 threads_MSRC  = threads/start.S		# Startup code.
 threads_MSRC += threads/kmain.c		# Main program for M-mode.
 threads_MSRC += threads/interrupt.c	# Interrupt core.
@@ -85,7 +83,6 @@ devices_MSRC += devices/serial.c		# Serial port device.
 devices_MSRC += devices/block.c		# Block device abstraction layer.
 devices_MSRC += devices/partition.c	# Partition block device.
 devices_MSRC += devices/virtio-blk.c	# Virtio disk block device.
-devices_MSRC += devices/intq.c		# Interrupt queue.
 devices_MSRC += devices/shutdown.c	# Reboot and power off.
 lib_MSRC  = lib/debug.c			# Debug helpers.
 lib_MSRC += lib/random.c			# Pseudo-random numbers.
@@ -93,14 +90,12 @@ lib_MSRC += lib/stdio.c			# I/O library.
 lib_MSRC += lib/stdlib.c			# Utility functions.
 lib_MSRC += lib/string.c			# String functions.
 lib_MSRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
-# lib/kernel_MSRC  = lib/kernel/debug.c	# Debug helpers.
 lib/kernel_MSRC += lib/kernel/list.c	# Doubly-linked lists.
 lib/kernel_MSRC += lib/kernel/console.c	# printf(), putchar().
-# userprog_MSRC += userprog/pagedir.c	# Page directories.
 
-MSOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
-MOBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(MSOURCES)))
-MDEPENDS = $(patsubst %.o,%.d,$(MOBJECTS))
+MSOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_MSRC))
+MOBJECTS = $(patsubst %.c,%_M.o,$(patsubst %.S,%_M.o,$(MSOURCES)))
+MDEPENDS = $(patsubst %.o,%_M.d,$(MOBJECTS))
 
 SOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
 OBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(SOURCES)))
@@ -110,8 +105,6 @@ threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
 threads/loader.lds.s: threads/loader.lds.S threads/loader.h
-
-kernel.bin: DEFINES += -DMACHINE
 
 kernel.o: threads/kernel.lds.s $(OBJECTS)
 	$(LD) -T $< -o $@ $(OBJECTS)
@@ -133,7 +126,7 @@ os.dsk: kernel.bin
 
 clean::
 	rm -f $(OBJECTS) $(DEPENDS)
-	# rm -f $(MOBJECTS) $(MDEPENDS)
+	rm -f $(MOBJECTS) $(MDEPENDS)
 	rm -f threads/loader.o threads/kernel.lds.s threads/loader.d
 	rm -f kernel.bin.tmp
 	rm -f kernel.o kernel.lds.s

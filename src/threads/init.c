@@ -1,4 +1,5 @@
 #include "threads/init.h"
+#include <riscv.h>
 #include <console.h>
 #include <debug.h>
 #include <inttypes.h>
@@ -23,6 +24,7 @@
 #include "threads/palloc.h"
 #include "threads/pte.h"
 #include "threads/thread.h"
+#include "userprog/pagedir.h"
 #ifdef USERPROG
 #include "userprog/process.h"
 #include "userprog/exception.h"
@@ -41,7 +43,7 @@
 
 /* Page directory with kernel mappings only. */
 uint_t* init_page_dir;
-uintptr_t init_ram_pages;
+size_t init_ram_pages;
 
 #ifdef FILESYS
 /* -f: Format the file system? */
@@ -73,12 +75,15 @@ static void locate_block_device(enum block_type, const char* name);
 #endif
 
 /* Pintos main program. */
-int jbmain(void) {
+int main(void* fdt UNUSED, size_t ram_pages) {
   char** argv;
+
+  /* Clear BSS. */
+  bss_init();
 
   /* Break command line into arguments and parse options. */
   argv = read_command_line();
-  // argv = parse_options(argv);
+  argv = parse_options(argv);
 
   /* Initialize ourselves as a thread so we can use locks,
      then enable console locking. */
@@ -86,6 +91,7 @@ int jbmain(void) {
   console_init();
 
   /* Greet user. */
+  init_ram_pages = ram_pages;
   printf("Pintos booting with %'" PRIu32 " kB RAM...\n", init_ram_pages * PGSIZE / 1024);
 
   /* Initialize memory system. */
@@ -130,6 +136,16 @@ int jbmain(void) {
   thread_exit();
 }
 
+/* Clear the "BSS", a segment that should be initialized to
+   zeros.
+
+   The start and end of the BSS segment is recorded by the
+   linker as _start_bss and _end_bss.  See kernel.lds. */
+static void bss_init(void) {
+  extern char _start_bss, _end_bss;
+  memset(&_start_bss, 0, &_end_bss - &_start_bss);
+}
+
 /* Populates the base page directory and page table with the
    kernel virtual mapping, and then sets up the CPU to use the
    new page directory.  Points init_page_dir to the page
@@ -137,12 +153,13 @@ int jbmain(void) {
 static void paging_init(void) {
   uint_t *pd, *pt;
   size_t page;
+  uintptr_t old_page_dir = ptov(csr_read(CSR_SATP));
   extern char _start, _end_kernel_text;
 
   pd = init_page_dir = palloc_get_page(PAL_ASSERT | PAL_ZERO);
   pt = NULL;
   for (page = 0; page < init_ram_pages; page++) {
-    uintptr_t paddr = page * PGSIZE;
+    uintptr_t paddr = page * PGSIZE + KERN_BASE;
     char* vaddr = ptov(paddr);
     size_t pde_idx = pd_no(vaddr);
     size_t pte_idx = pt_no(vaddr);
@@ -156,26 +173,28 @@ static void paging_init(void) {
     pt[pte_idx] = pte_create_kernel(vaddr, !in_kernel_text);
   }
 
-  /* Store the physical address of the page directory into CR3
-     aka PDBR (page directory base register).  This activates our
-     new page tables immediately.  See [IA32-v2a] "MOV--Move
-     to/from Control Registers" and [IA32-v3a] 3.7.5 "Base Address
-     of the Page Directory". */
-  // asm volatile("movl %0, %%cr3" : : "r"(vtop(init_page_dir)));
+  /* Copy MMIO mappings. */
+  for (page = 0;; page++) {
+    uintptr_t vaddr = page * PGSIZE + MMIO_START;
+    size_t pde_idx = pd_no(vaddr);
+    size_t pte_idx = pt_no(vaddr);
+  }
+
+  /* Stores the physical address of the page directory into SATP.
+     This activates our new page tables immediately.
+     See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
+     and Protection (satp) Register". */
+  csr_write(CSR_SATP, (1<<31) | pg_no(init_page_dir));
+  sfence_vma();
 }
 
 /* Breaks the kernel command line into words and returns them as
    an argv-like array. */
 static char** read_command_line(void) {
-  shutdown_configure(SHUTDOWN_POWER_OFF);
-  active_sched_policy = SCHED_FIFO;
-  return NULL;
   static char* argv[LOADER_ARGS_LEN / 2 + 1];
   char *p, *end;
   int argc;
   int i;
-
-  // 0x83e001ac
 
   argc = *(uint32_t*)ptov(LOADER_ARG_CNT);
   p = ptov(LOADER_ARGS);

@@ -1,10 +1,6 @@
 #ifndef THREADS_LOADER_H
 #define THREADS_LOADER_H
 
-/* Constants fixed by the PC BIOS. */
-#define LOADER_BASE 0x7c00 /* Physical address of loader's base. */
-#define LOADER_END 0x7e00  /* Physical address of end of loader. */
-
 /* Physical address of kernel base. */
 #define LOADER_KERN_BASE 0x20000 /* 128 kB. */
 
@@ -14,6 +10,12 @@
 
 /* Kernel physical address base. Fixed by QEMU. */
 #define KERNEL_PHYS_BASE 0x80000000 /* 2 GB. */
+
+/* The amount of physical ram we provide to Pintos. */
+#define MEM_LENGTH 0x4000000  /* 64MB */
+
+/* For booting arguments. */
+#define LOADER_END KERNEL_PHYS_BASE + LOADER_KERN_BASE  /* Physical address of end of loader. */
 
 /* Important loader physical addresses. */
 #define LOADER_SIG (LOADER_END - LOADER_SIG_LEN)          /* 0xaa55 BIOS signature. */

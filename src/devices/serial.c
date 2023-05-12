@@ -17,7 +17,11 @@
    Refer to [PC16650D] for hardware information. */
 
 /* I/O port base address for the first serial port. */
-uintptr_t IO_BASE = 0x10000000L;
+#ifndef MACHINE
+uintptr_t IO_BASE = 0xf0000000L;  /* Virtual address. */
+#else
+uintptr_t IO_BASE = SERIAL_MMIO_BASE;  /* Physical address. */
+#endif
 
 /* DLAB=0 registers. */
 #define RBR_REG (IO_BASE + 0) /* Receiver Buffer Reg. (read-only). */
@@ -65,16 +69,41 @@ static intr_handler_func serial_interrupt;
    Polling mode busy-waits for the serial port to become free
    before writing to it.  It's slow, but until interrupts have
    been initialized it's all we can do. */
-static void init_poll(void) {
+void init_poll(void) {
   ASSERT(mode == UNINIT);
-  IO_BASE = pagedir_set_mmio(init_page_dir, 0x10000000, 0x100, true);
+  #ifndef MACHINE
+  mode = POLL;
+  return;
+  #endif
   outb(IER_REG, 0);        /* Turn off all interrupts. */
   outb(FCR_REG, 0);        /* Disable FIFO. */
   set_serial(9600);        /* 9.6 kbps, N-8-1. */
   outb(MCR_REG, MCR_OUT2); /* Required to enable interrupts. */
+  #ifndef MACHINE
   intq_init(&txq);
+  #endif
   mode = POLL;
 }
+
+/* Configures the serial port for BPS bits per second. */
+static void set_serial(int bps) {
+  int base_rate = 0x384000 / 16;      /* Base rate of 16550A, in Hz, by DTB. */
+  uint16_t divisor = base_rate / bps; /* Clock rate divisor. */
+
+  ASSERT(bps >= 300 && bps <= 115200);
+
+  /* Enable DLAB. */
+  outb(LCR_REG, LCR_N81 | LCR_DLAB);
+
+  /* Set data rate. */
+  outb(LS_REG, divisor & 0xff);
+  outb(MS_REG, divisor >> 8);
+
+  /* Reset DLAB. */
+  outb(LCR_REG, LCR_N81);
+}
+
+#ifndef MACHINE
 
 /* Initializes the serial port device for queued interrupt-driven
    I/O.  With interrupt-driven I/O we don't waste CPU time
@@ -141,24 +170,6 @@ void serial_notify(void) {
     write_ier();
 }
 
-/* Configures the serial port for BPS bits per second. */
-static void set_serial(int bps) {
-  int base_rate = 0x384000 / 16;      /* Base rate of 16550A, in Hz, by DTB. */
-  uint16_t divisor = base_rate / bps; /* Clock rate divisor. */
-
-  ASSERT(bps >= 300 && bps <= 115200);
-
-  /* Enable DLAB. */
-  outb(LCR_REG, LCR_N81 | LCR_DLAB);
-
-  /* Set data rate. */
-  outb(LS_REG, divisor & 0xff);
-  outb(MS_REG, divisor >> 8);
-
-  /* Reset DLAB. */
-  outb(LCR_REG, LCR_N81);
-}
-
 /* Update interrupt enable register. */
 static void write_ier(void) {
   uint8_t ier = 0;
@@ -207,3 +218,13 @@ static void serial_interrupt(struct intr_frame* f UNUSED) {
   /* Update interrupt enable register based on queue status. */
   write_ier();
 }
+
+#else
+
+void serial_putc(uint8_t byte) {
+  while ((inb(LSR_REG) & LSR_THRE) == 0)
+    continue;
+  outb(THR_REG, byte);
+}
+
+#endif

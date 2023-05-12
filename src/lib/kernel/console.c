@@ -2,7 +2,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include "devices/serial.h"
-// #include "devices/vga.h"
+#include "devices/vga.h"
 #include "threads/init.h"
 #include "threads/interrupt.h"
 #include "threads/synch.h"
@@ -11,7 +11,6 @@ static void vprintf_helper(char, void*);
 static void putchar_have_lock(uint8_t c);
 
 #ifdef MACHINE
-
 int vprintf(const char* format, va_list args) {
   __vprintf(format, args, serial_putc, NULL);
 }

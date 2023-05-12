@@ -27,8 +27,10 @@ static void invalidate_pagedir(uint_t*);
 #define SATP_SV SATP_MODE_SV39
 #endif /* __riscv_xlen */
 
-/* After PHYS_BASE, we set 0xf0000000 as the base for MMIO. */
-uintptr_t mmio_next_available = 0xf0000000;
+/* After PHYS_BASE, we set 0xf0000000 as the base for MMIO.
+   Because we have allocated the first two pages for serial and shutdown,
+   we set it to 0xf0002000. */
+uintptr_t mmio_next_available = MMIO_START + 2 * PGSIZE;
 
 /* Creates a new page directory that has mappings for kernel
    virtual addresses, but none for user virtual addresses.
@@ -165,14 +167,6 @@ void* pagedir_get_page(uint_t* pd, const void* uaddr) {
    WARNING: After the first userprog is set up, DO NOT call this function,
    or the MMIO region becomes inconsistent among page tables. */
 void* pagedir_set_mmio(uint_t* pd, void* base, size_t size, bool writable) {
-  /* M-mode would never use memory >= PHYS_BASE.
-     We disable page table for M-mode. */
-  void* current_stack;
-  asm volatile ("mv %0, sp" : "=r" (current_stack) : : "memory");
-  if (!is_kernel_vaddr(current_stack)) {
-    return base;
-  }
-
   void* old = mmio_next_available;
   size = pg_round_up(size);
   while (mmio_next_available < ((uintptr_t) old) + size) {

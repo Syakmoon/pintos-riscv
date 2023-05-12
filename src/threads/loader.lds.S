@@ -4,8 +4,6 @@ OUTPUT_ARCH(riscv)
 ENTRY(start)			/* Loader starts at "start" symbol. */
 SECTIONS
 {
-  MEM_LENGTH = 0x4000000;
-  PROVIDE(__mem_length = MEM_LENGTH);
   /* Specify the kernel base address. */
   _start = KERNEL_PHYS_BASE;
 
@@ -15,34 +13,20 @@ SECTIONS
   .init : {
         KEEP (*(SORT_NONE(.init)))
   }
-  .text : { *(.start) 
-        *(.text) }
-  .rodata : { 
-        . = ALIGN(0x1000);
-        *(.rodata) *(.rodata.*)
-        . = ALIGN(0x1000);
-	      _end_kernel_text = .; }
+  .text : { *(.start) *(.text) } = 0x13
+  .rodata : { *(.rodata) *(.rodata.*)
+	      . = ALIGN(0x1000); }
   .eh_frame : { *(.eh_frame) }
-  .data : { 
-	      . = ALIGN(0x1000);
-        *(.data)
-	    _signature = .; LONG(0xaa55aa55) }
+  .data : { *(.data) }
 
-  .plt : { 
-	      . = ALIGN(0x1000);
-        *(.plt*) }
+  .plt : { *(.plt*) }
 
   /* BSS (zero-initialized data) is after everything else. */
-  . = ALIGN(0x1000);
   _start_bss = .;
-  .bss : { 
-        *(.bss) }
+  .bss : { *(.bss) }
   _end_bss = .;
 
   _end = .;
 
-  PROVIDE(__kernel_start = _start);
-  PROVIDE(__kernel_end = _end);
-
-  ASSERT (_end - _start <= 512K, "Kernel image is too big.")
+  ASSERT (_end - _start <= 64K, "Loader image is too big.")
 }
