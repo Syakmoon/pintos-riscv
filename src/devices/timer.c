@@ -29,6 +29,7 @@ static void real_time_sleep(int64_t num, int32_t denom);
 static void real_time_delay(int64_t num, int32_t denom);
 
 #ifdef MACHINE
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding Machine interrupt. */
 void timer_init_machine(void) {
@@ -50,7 +51,7 @@ static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
   csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_SOFTWARE));
 }
 
-#endif
+#else
 
 /* Registers the corresponding Supervisor interrupt. */
 void timer_init(void) {
@@ -219,3 +220,4 @@ static void real_time_delay(int64_t num, int32_t denom) {
   ASSERT(denom % 1000 == 0);
   busy_wait(loops_per_tick * num / 1000 * TIMER_FREQ / (denom / 1000));
 }
+#endif

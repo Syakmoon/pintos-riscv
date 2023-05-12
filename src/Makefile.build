@@ -10,9 +10,12 @@ include ../../tests/Make.tests
 
 # Compiler and assembler options.
 kernel.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
+loader.bin: CPPFLAGS += -I$(SRCDIR)/lib/kernel
 
 # Core kernel.
-threads_SRC = threads/init.c		# Main program.
+threads_SRC  = threads/start.S		# Startup code.
+threads_SRC += threads/kmain.c		# Main program for M-mode.
+threads_SRC += threads/init.c		# Main program.
 threads_SRC += threads/thread.c		# Thread management core.
 threads_SRC += threads/switch.S		# Thread switch routine.
 threads_SRC += threads/interrupt.c	# Interrupt core.
@@ -90,10 +93,10 @@ lib_MSRC += lib/stdio.c			# I/O library.
 lib_MSRC += lib/stdlib.c			# Utility functions.
 lib_MSRC += lib/string.c			# String functions.
 lib_MSRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
-lib/kernel_MSRC  = lib/kernel/debug.c	# Debug helpers.
+# lib/kernel_MSRC  = lib/kernel/debug.c	# Debug helpers.
 lib/kernel_MSRC += lib/kernel/list.c	# Doubly-linked lists.
 lib/kernel_MSRC += lib/kernel/console.c	# printf(), putchar().
-userprog_MSRC += userprog/pagedir.c	# Page directories.
+# userprog_MSRC += userprog/pagedir.c	# Page directories.
 
 MSOURCES = $(foreach dir,$(KERNEL_SUBDIRS),$($(dir)_SRC))
 MOBJECTS = $(patsubst %.c,%.o,$(patsubst %.S,%.o,$(MSOURCES)))
@@ -107,6 +110,8 @@ threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
 threads/loader.lds.s: threads/loader.lds.S threads/loader.h
+
+kernel.bin: DEFINES += -DMACHINE
 
 kernel.o: threads/kernel.lds.s $(OBJECTS)
 	$(LD) -T $< -o $@ $(OBJECTS)

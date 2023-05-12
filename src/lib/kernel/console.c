@@ -10,6 +10,14 @@
 static void vprintf_helper(char, void*);
 static void putchar_have_lock(uint8_t c);
 
+#ifdef MACHINE
+
+int vprintf(const char* format, va_list args) {
+  __vprintf(format, args, serial_putc, NULL);
+}
+
+#else
+
 /* The console lock.
    Both the vga and serial layers do their own locking, so it's
    safe to call them at any time.
@@ -157,3 +165,5 @@ static void putchar_have_lock(uint8_t c) {
   serial_putc(c);
   // vga_putc(c);
 }
+
+#endif

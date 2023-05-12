@@ -1,7 +1,7 @@
 #include "threads/loader.h"
 
 OUTPUT_ARCH(riscv)
-ENTRY(start)			/* Kernel starts at "start" symbol. */
+ENTRY(main)			/* Kernel starts at "main" symbol. */
 SECTIONS
 {
   MEM_LENGTH = 0x4000000;

@@ -322,8 +322,10 @@ void intr_handler(struct intr_frame* frame) {
     if (external)
       plic_end_of_interrupt(vec_no - EXTERNAL_OFFSET);
 
+    #ifndef MACHINE
     if (yield_on_return)
       thread_yield();
+    #endif
   }
 }
 

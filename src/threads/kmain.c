@@ -7,6 +7,7 @@
 #include "devices/timer.h"
 #include "devices/virtio-blk.h"
 #include "devices/block.h"
+#include "devices/serial.h"
 
 extern void mintr_entry();
 // extern int main(void);
@@ -18,23 +19,7 @@ uintptr_t next_avail_address;
 uintptr_t* init_page_dir;
 
 int main(void) {
-  thread_init();
-  console_init();
-
-  /* Initialize memory system. */
-  palloc_init(SIZE_MAX);
-  malloc_init();
-    intr_init();
-    intr_enable();
-    for(int a = 0; a < INTMAX_MAX; ++a){
-        intr_disable();
-        for(int b = 0; b < 500000;){
-            ++b;
-        }    // This should be for at least one timer interrupt
-        csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SSTATUS_SIE);
-        wfi();
-    }
-    return 1024;
+  return 1024;
 }
 
 /* Clear the "BSS", a segment that should be initialized to
@@ -180,6 +165,7 @@ static void return_to_supervisor() {
 void kmain(int hart UNUSED, void* fdt) {
   /* Clear BSS. */
   bss_init();
+  putc_poll('b');
 
   /* We save the pointer to fdt for main to discover device information. */
   fdt_ptr = fdt;

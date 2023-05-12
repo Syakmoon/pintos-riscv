@@ -18,4 +18,10 @@ void pagedir_set_accessed(uint_t* pd, const void* upage, bool accessed);
 void pagedir_activate(uint_t* pd);
 uint_t* active_pd(void);
 
+#ifdef MACHINE
+void* pagedir_set_mmio(uint_t* pd, void* base, size_t size, bool writable) {
+  return base;
+}
+#endif
+
 #endif /* userprog/pagedir.h */
