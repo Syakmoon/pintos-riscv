@@ -54,11 +54,10 @@ static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
 
 /* Registers the corresponding Supervisor interrupt. */
 void timer_init(void) {
+  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, timer_interrupt, "Supervisor Timer");
+
   /* Enables Supervisor timer interrupt. */
   csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SSI);
-
-  /* Set Machine timer to the next interval. */
-  intr_register_int(IRQ_S_SOFTWARE, false, INTR_ON, ptov(timer_interrupt), "Supervisor Timer");
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */

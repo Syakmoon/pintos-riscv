@@ -529,10 +529,12 @@ sub get_scratch_file {
 # Runs the selected simulator.
 sub run_vm {
     if ($sim eq 'bochs') {
+    die "Only QEMU is supported!\n";
 	run_bochs ();
     } elsif ($sim eq 'qemu') {
 	run_qemu ();
     } elsif ($sim eq 'player') {
+    die "Only QEMU is supported!\n";
 	run_player ();
     } else {
 	die "unknown simulator `$sim'\n";

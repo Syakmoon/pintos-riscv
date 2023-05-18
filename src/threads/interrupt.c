@@ -244,7 +244,7 @@ static void plic_end_of_interrupt(int irq) {
 /* Returns true if this trap to the OS was from userspace */
 #ifdef USERPROG
 static inline bool is_trap_from_userspace(struct intr_frame* frame) {
-  return !(csr_read(CSR_SSTATUS) & SSTATUS_SPP);
+  return !(frame->status & SSTATUS_SPP);
 }
 #endif
 
@@ -381,4 +381,4 @@ void intr_dump_frame(const struct intr_frame* f) {
 }
 
 /* Returns the name of interrupt VEC. */
-const char* intr_name(uint8_t vec) { return intr_names[vec]; }
+const char* intr_name(long cause) { return intr_names[cause_to_vec_no(cause)]; }

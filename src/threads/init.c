@@ -36,7 +36,7 @@
 #endif
 #ifdef FILESYS
 #include "devices/block.h"
-#include "devices/ide.h"
+#include "devices/virtio-blk.h"
 #include "filesys/filesys.h"
 // #include "filesys/fsutil.h"
 #endif
@@ -121,7 +121,7 @@ int main(void* fdt UNUSED, size_t ram_pages) {
 
 #ifdef FILESYS
   /* Initialize file system. */
-  ide_init();
+  virtio_blks_init(INTERRUPT);
   locate_block_devices();
   filesys_init(format_filesys);
 #endif
@@ -129,7 +129,7 @@ int main(void* fdt UNUSED, size_t ram_pages) {
   printf("Boot complete.\n");
 
   /* Run actions specified on kernel command line. */
-  run_actions(argv);
+  // run_actions(argv);
 
   /* Finish up. */
   shutdown();
@@ -153,7 +153,7 @@ static void bss_init(void) {
 static void paging_init(void) {
   uint_t *pd, *pt;
   size_t page;
-  uintptr_t old_page_dir = ptov(csr_read(CSR_SATP));
+  uint_t* old_page_dir = ptov((csr_read(CSR_SATP) & SATP_PPN) << PGBITS);
   extern char _start, _end_kernel_text;
 
   pd = init_page_dir = palloc_get_page(PAL_ASSERT | PAL_ZERO);
@@ -163,28 +163,50 @@ static void paging_init(void) {
     char* vaddr = ptov(paddr);
     size_t pde_idx = pd_no(vaddr);
     size_t pte_idx = pt_no(vaddr);
-    bool in_kernel_text = &_start <= paddr && paddr < &_end_kernel_text;
+    bool machine = vaddr < (&_start - 2 * PGSIZE);
+    bool in_kernel_text = &_start <= vaddr && vaddr < &_end_kernel_text;
 
     if (pd[pde_idx] == 0) {
       pt = palloc_get_page(PAL_ASSERT | PAL_ZERO);
       pd[pde_idx] = pde_create(pt);
     }
 
-    pt[pte_idx] = pte_create_kernel(vaddr, !in_kernel_text);
+    if (machine)
+      pt[pte_idx] = pte_create_kernel(vaddr, PTE_R | PTE_W | PTE_X);
+    else if (in_kernel_text)
+      pt[pte_idx] = pte_create_kernel(vaddr, PTE_R | PTE_X);
+    else
+      pt[pte_idx] = pte_create_kernel(vaddr, PTE_R | PTE_W);
   }
 
   /* Copy MMIO mappings. */
-  for (page = 0;; page++) {
+  for (page = 0; page < (UINT_MAX - MMIO_START + 1) >> PGBITS;) {
     uintptr_t vaddr = page * PGSIZE + MMIO_START;
     size_t pde_idx = pd_no(vaddr);
     size_t pte_idx = pt_no(vaddr);
+    uint_t* old_pt;
+
+    /* Instead of continuing the copy, we think that this is
+       the end of the mappings. */
+    if (old_page_dir[pde_idx] == 0)
+      break;
+    old_pt = pde_get_pt(old_page_dir[pde_idx]);
+    if (old_pt[pte_idx] == 0)
+      break;
+
+    if (pd[pde_idx] == 0) {
+      pt = palloc_get_page(PAL_ASSERT | PAL_ZERO);
+      pd[pde_idx] = pde_create(pt);
+    }
+    pt[pte_idx] = old_pt[pte_idx];
+    page++;
   }
 
   /* Stores the physical address of the page directory into SATP.
      This activates our new page tables immediately.
      See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
      and Protection (satp) Register". */
-  csr_write(CSR_SATP, (1<<31) | pg_no(init_page_dir));
+  csr_write(CSR_SATP, (pg_no((vtop(init_page_dir))) & SATP_PPN) | SATP_SV);
   sfence_vma();
 }
 
@@ -444,11 +466,11 @@ static void usage(void) {
 #ifdef FILESYS
 /* Figure out what block devices to cast in the various Pintos roles. */
 static void locate_block_devices(void) {
-//   locate_block_device(BLOCK_FILESYS, filesys_bdev_name);
-//   locate_block_device(BLOCK_SCRATCH, scratch_bdev_name);
-// #ifdef VM
-//   locate_block_device(BLOCK_SWAP, swap_bdev_name);
-// #endif
+  locate_block_device(BLOCK_FILESYS, filesys_bdev_name);
+  locate_block_device(BLOCK_SCRATCH, scratch_bdev_name);
+#ifdef VM
+  locate_block_device(BLOCK_SWAP, swap_bdev_name);
+#endif
 }
 
 /* Figures out what block device to use for the given ROLE: the

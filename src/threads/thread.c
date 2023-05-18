@@ -39,7 +39,6 @@ static struct lock tid_lock;
 
 /* Stack frame for kernel_thread(). */
 struct kernel_thread_frame {
-  void* eip;             /* Return address. */
   thread_func* function; /* Function to call. */
   void* aux;             /* Auxiliary data for function. */
 };
@@ -193,18 +192,17 @@ tid_t thread_create(const char* name, int priority, thread_func* function, void*
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame(t, sizeof *kf);
-  kf->eip = NULL;
   kf->function = function;
   kf->aux = aux;
 
   /* Stack frame for switch_entry(). */
   ef = alloc_frame(t, sizeof *ef);
-  ef->eip = (void (*)(void))kernel_thread;
+  ef->ra = (void (*)(void))kernel_thread;
 
   /* Stack frame for switch_threads(). */
   sf = alloc_frame(t, sizeof *sf);
-  sf->eip = switch_entry;
-  sf->ebp = 0;
+  sf->ra = switch_entry;
+  sf->s0 = 0;
 
   /* Add to run queue. */
   thread_unblock(t);
@@ -392,14 +390,17 @@ static void idle(void* idle_started_ UNUSED) {
          
          To keep it consistent with x86 Pintos, we handled this
          case in intr_handler. */
-      csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SSTATUS_SIE);
-      wfi();
+    csr_write(CSR_SSTATUS, csr_read(CSR_SSTATUS) | SSTATUS_SIE);
+    wfi();
   }
 }
 
 /* Function used as the basis for a kernel thread. */
 static void kernel_thread(thread_func* function, void* aux) {
   ASSERT(function != NULL);
+
+  /* Null-terminate the thread's backtrace. */
+  asm("mv ra, %0" : : "r" (NULL));
 
   intr_enable(); /* The scheduler runs with interrupts off. */
   function(aux); /* Execute the thread function. */
@@ -570,4 +571,4 @@ static tid_t allocate_tid(void) {
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
-uint32_t thread_stack_ofs = offsetof(struct thread, stack);
+uintptr_t thread_stack_ofs = offsetof(struct thread, stack);

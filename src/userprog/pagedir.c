@@ -9,24 +9,6 @@
 
 static void invalidate_pagedir(uint_t*);
 
-#define SATP32_MODE 0x80000000
-#define SATP32_PPN  0x003FFFFF
-#define SATP64_MODE 0xF000000000000000
-#define SATP64_PPN  0x00000FFFFFFFFFFF
-
-#define SATP_MODE_SV32 1 << 31
-#define SATP_MODE_SV39 8 << 60
-
-#if __riscv_xlen == 32
-#define SATP_MODE SATP32_MODE
-#define SATP_PPN SATP32_PPN
-#define SATP_SV SATP_MODE_SV32
-#else
-#define SATP_MODE SATP64_MODE
-#define SATP_PPN SATP64_PPN
-#define SATP_SV SATP_MODE_SV39
-#endif /* __riscv_xlen */
-
 /* After PHYS_BASE, we set 0xf0000000 as the base for MMIO.
    Because we have allocated the first two pages for serial and shutdown,
    we set it to 0xf0002000. */
@@ -261,7 +243,7 @@ void pagedir_activate(uint_t* pd) {
      This activates our new page tables immediately.
      See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
      and Protection (satp) Register". */
-  csr_write(CSR_SATP, (pg_no((vtop(pd))) & SATP32_PPN) | SATP_SV);
+  csr_write(CSR_SATP, (pg_no((vtop(pd))) & SATP_PPN) | SATP_SV);
 
   /* Make sure we the new page table takes into effect. */
   sfence_vma();

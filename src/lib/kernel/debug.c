@@ -71,7 +71,10 @@ static void print_stacktrace(struct thread* t, void* aux UNUSED) {
   printf("Call stack of thread `%s' (status %s):", t->name, status);
 
   if (t == thread_current()) {
-    frame = __builtin_frame_address(1);
+    /* __builtin_frame_address(1) is unreliable on RISC-V. */
+    frame = __builtin_frame_address(0);
+    frame = frame[-2];
+
     retaddr = __builtin_return_address(0);
   } else {
     /* Retrieve the values of the base and instruction pointers
@@ -86,18 +89,19 @@ static void print_stacktrace(struct thread* t, void* aux UNUSED) {
          at the top of their kernel stack page, or the
          switch_threads_frame's 'eip' member points at switch_entry.
          See also threads.c. */
-    if (t->stack == (uint8_t*)t + PGSIZE || saved_frame->eip == switch_entry) {
+    if (t->stack == (uint8_t*)t + PGSIZE || saved_frame->ra == switch_entry) {
       printf(" thread was never scheduled.\n");
       return;
     }
 
-    frame = (void**)saved_frame->ebp;
-    retaddr = (void*)saved_frame->eip;
+    frame = (void**)saved_frame->s0;
+    retaddr = (void*)saved_frame->ra;
   }
 
   printf(" %p", retaddr);
-  for (; (uintptr_t)frame >= 0x1000 && frame[0] != NULL; frame = frame[0])
-    printf(" %p", frame[1]);
+  for (; (uintptr_t)frame >= 0x1000 && ((uintptr_t)frame[-2]) & 0xfff; frame = frame[-2])
+    printf(" %p", frame[-1]);
+  printf(" %p", frame[-1]);
   printf(".\n");
 }
 

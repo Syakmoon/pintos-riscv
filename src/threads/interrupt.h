@@ -80,18 +80,15 @@ bool intr_context(void);
 void intr_yield_on_return(void);
 
 void intr_dump_frame(const struct intr_frame*);
-const char* intr_name(uint8_t vec);
+const char* intr_name(long cause);
 
-#else
+#endif /* __ASSEMBLER__ */
 
 /* We align the sp to 16-byte for better performance. */
-// #define INTR_FRAME_SIZE ALIGN(sizeof(struct intr_frame), 16)
 #if __riscv_xlen == 32
 #define INTR_FRAME_SIZE 144
 #else
 #define INTR_FRAME_SIZE 272
 #endif /* __riscv_xlen */
-
-#endif /* __ASSEMBLER__ */
 
 #endif /* threads/interrupt.h */

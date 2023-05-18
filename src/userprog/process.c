@@ -199,10 +199,6 @@ void process_activate(void) {
     pagedir_activate(t->pcb->pagedir);
   else
     pagedir_activate(NULL);
-
-  /* Set thread's kernel stack for use in processing interrupts.
-     This does nothing if this is not a user process. */
-  // tss_update();
 }
 
 /* We load ELF binaries.  The following definitions are taken

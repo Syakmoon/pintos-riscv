@@ -18,6 +18,6 @@ start:
 	and sp, sp, t0
     add s0, sp, zero
 	
-    jal zero, kmain
+    call zero, kmain
     .cfi_endproc
 .end

@@ -304,6 +304,7 @@ static void descramble_virtio_string(uint32_t, char* dest);
 /* Resets a virtio block device. */
 static inline void reset_device(struct virtio_blk* blk) {
   outl(reg_status(blk), 0);
+  __sync_synchronize();
 }
 
 /* Checks whether device D is an ATA disk and sets D's is_blk

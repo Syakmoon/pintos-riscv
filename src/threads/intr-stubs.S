@@ -48,6 +48,7 @@
   REG_L x5,  5*REGBYTES(sp)
   REG_L x6,  6*REGBYTES(sp)
   REG_L x7,  7*REGBYTES(sp)
+  REG_L x8,  8*REGBYTES(sp)
   REG_L x9,  9*REGBYTES(sp)
   REG_L x10, 10*REGBYTES(sp)
   REG_L x11, 11*REGBYTES(sp)
@@ -57,7 +58,6 @@
   REG_L x15, 15*REGBYTES(sp)
   REG_L x16, 16*REGBYTES(sp)
   REG_L x17, 17*REGBYTES(sp)
-  REG_L x18, 18*REGBYTES(sp)
   REG_L x19, 19*REGBYTES(sp)
   REG_L x20, 20*REGBYTES(sp)
   REG_L x21, 21*REGBYTES(sp)
@@ -98,12 +98,12 @@ msave_context:
   REG_S t3, 33*REGBYTES(sp)
   REG_S t4, 34*REGBYTES(sp)
   
-  /* s0 is a callee-saved register, so we can safely assume it is unchanged. */
-  csrr   s0,mstatus
+  /* S2 is a callee-saved register, so we can safely assume it is unchanged. */
+  csrr   s2,mstatus
 
   /* Put sp, which points to `struct intr_frame`, to argument 0. */
   mv a0, sp
-  jal intr_handler
+  call intr_handler
 .endfunc
 
 .globl mintr_exit
@@ -121,17 +121,17 @@ mintr_exit:
   load_gpr
 
   /* If we are trapping from kernel (Machine), do not restore CSR_SCRATCH. */
-  srli s0, s0, MSTATUS_MPP_BIT
-  andi s0, s0, 2
-  bnez s0, 1f
+  srli s2, s2, MSTATUS_MPP_BIT
+  andi s2, s2, 2
+  bnez s2, 1f
   addi sp, sp, INTR_FRAME_SIZE
   csrw mscratch, sp
-  REG_L s0,  8*REGBYTES-INTR_FRAME_SIZE(sp)
+  REG_L s2,  18*REGBYTES-INTR_FRAME_SIZE(sp)
   REG_L sp,  2*REGBYTES-INTR_FRAME_SIZE(sp)
   mret
   j wfi_loop /* It should never return after mret */
 1:
-  REG_L s0,  8*REGBYTES(sp)
+  REG_L s2,  18*REGBYTES(sp)
   addi sp, sp, INTR_FRAME_SIZE
   mret
   j wfi_loop /* It should never return after mret */
@@ -160,12 +160,12 @@ save_context:
   REG_S t3, 33*REGBYTES(sp)
   REG_S t4, 34*REGBYTES(sp)
   
-  /* s0 is a callee-saved register, so we can safely assume it is unchanged. */
-  csrr   s0,sstatus
+  /* S2 is a callee-saved register, so we can safely assume it is unchanged. */
+  csrr   s2,sstatus
 
   /* Put sp, which points to `struct intr_frame`, to argument 0. */
   mv a0, sp
-  jal intr_handler
+  call intr_handler
 .endfunc
 
 .globl intr_exit
@@ -183,16 +183,16 @@ intr_exit:
   load_gpr
 
   /* If we are trapping from kernel (Supervisor), do not restore CSR_SCRATCH. */
-  andi s0, s0, SSTATUS_SPP
-  bnez s0, 1f
+  andi s2, s2, SSTATUS_SPP
+  bnez s2, 1f
   addi sp, sp, INTR_FRAME_SIZE
   csrw sscratch, sp
-  REG_L s0,  8*REGBYTES-INTR_FRAME_SIZE(sp)
+  REG_L s2,  18*REGBYTES-INTR_FRAME_SIZE(sp)
   REG_L sp,  2*REGBYTES-INTR_FRAME_SIZE(sp)
   sret
   j wfi_loop /* It should never return after sret */
 1:
-  REG_L s0,  8*REGBYTES(sp)
+  REG_L s2,  18*REGBYTES(sp)
   addi sp, sp, INTR_FRAME_SIZE
   sret
   j wfi_loop /* It should never return after sret */

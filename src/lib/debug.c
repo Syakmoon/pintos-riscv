@@ -15,9 +15,13 @@ void debug_backtrace(void) {
   void** frame;
 
   printf("Call stack: %p", __builtin_return_address(0));
-  for (frame = __builtin_frame_address(1); (uintptr_t)frame >= 0x1000 && frame[0] != NULL;
-       frame = frame[0])
-    printf(" %p", frame[1]);
+
+  /* __builtin_frame_address(1) is unreliable on RISC-V. */
+  for (frame = __builtin_frame_address(0), frame = frame[-2];
+       (uintptr_t)frame >= 0x1000 && (uintptr_t)frame[-2] & 0xfff;
+       frame = frame[-2])
+    printf(" %p", frame[-1]);
+  printf(" %p", frame[-1]);
   printf(".\n");
 
   if (!explained) {
@@ -30,6 +34,17 @@ void debug_backtrace(void) {
 
 #ifdef MACHINE
 void debug_panic(const char* file, int line, const char* function, const char* message, ...) {
+  va_list args;
+
+  printf("Kernel PANIC at %s:%d in %s(): ", file, line, function);
+
+  va_start(args, message);
+  vprintf(message, args);
+  printf("\n");
+  va_end(args);
+
+  debug_backtrace();
+
   shutdown();
   for (;;)
     ;

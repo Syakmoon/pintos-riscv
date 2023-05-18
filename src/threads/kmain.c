@@ -87,10 +87,7 @@ static void init_paging(void) {
     char* vaddr = ptov(paddr);
     size_t pde_idx = pd_no(vaddr);
 
-    // TEMP: do not do this after loader is full-fledged
-    size_t pde_idx_identical = pd_no(paddr);
     pd[pde_idx] = (pg_no(paddr) << PTE_FLAG_BITS) | PTE_R | PTE_W | PTE_X | PTE_V;
-    pd[pde_idx_identical] = pd[pde_idx];
   }
 
   /* Sets up a mapped page for serial and shutdown in the MMIO region. */
@@ -105,10 +102,6 @@ static void init_paging(void) {
      and Protection (satp) Register". */
   csr_write(CSR_SATP, (1<<31) | pg_no(init_page_dir));
   sfence_vma();
-
-  // TEMP: do not do this after loader is full-fledged
-  /* Relocation. */
-  init_page_dir = ptov(init_page_dir);
 }
 
 static void load_supervisor_kernel(void) {
@@ -117,8 +110,19 @@ static void load_supervisor_kernel(void) {
   uint8_t buffer[BLOCK_SECTOR_SIZE];
 
   virtio_blks_init(POLL);
+
+  /* NEXT_AVAIL_ADDRESS is capped at 2 pages under Supervisor kernel's base.
+     One page at the lower address for initial thread's stack.  This is to
+     keep consistent with x86 Pintos.  From x86 Pintos loader.S:
+
+     Set stack to grow downward from 60 kB (after boot, the kernel
+     continues to use this stack for its initial thread).
+     
+     The next page at the higher address uses its last block space (512 Bytes)
+     for the "loader", which is now a zero'd space only containing arguments
+     written by the Pintos program. */
   ASSERT(next_avail_address <=
-        KERNEL_PHYS_BASE + LOADER_KERN_BASE - (uintptr_t) PHYS_BASE);
+        KERNEL_PHYS_BASE + LOADER_KERN_BASE - 2 * ((uintptr_t) PGSIZE));
   kernel_position = KERNEL_PHYS_BASE + LOADER_KERN_BASE;
 
   /* To support reading arguments passed in by the Pintos program. */
@@ -161,7 +165,8 @@ static void return_to_supervisor() {
 
   machine_interrupt_init();
 
-  uintptr_t init_stack = ptov(next_avail_address + PGSIZE);
+  uintptr_t init_stack = ptov(KERNEL_PHYS_BASE + LOADER_KERN_BASE -
+                        (uintptr_t) PGSIZE); /* 60 kB */
   uintptr_t converted_fdt_ptr = ptov(fdt_ptr);
   uintptr_t init_main = KERNEL_PHYS_BASE + LOADER_KERN_BASE + 0x18;
   init_main = *(uintptr_t*) init_main;
@@ -177,7 +182,7 @@ static void return_to_supervisor() {
   asm volatile("mv a1, %0" : : "r" (init_ram_pages): "memory");
 
   /* Null-terminate main()'s backtrace. */
-  asm volatile("mv ra, %0" : : "r" (0));
+  asm volatile("mv ra, %0" : : "r" (NULL));
 
   /* Set MEPC to main to mret to this function. */
   csr_write(CSR_MEPC, init_main);

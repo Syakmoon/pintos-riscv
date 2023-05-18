@@ -4,13 +4,19 @@
 #ifndef __ASSEMBLER__
 /* switch_thread()'s stack frame. */
 struct switch_threads_frame {
-  uint32_t edi;        /*  0: Saved %edi. */
-  uint32_t esi;        /*  4: Saved %esi. */
-  uint32_t ebp;        /*  8: Saved %ebp. */
-  uint32_t ebx;        /* 12: Saved %ebx. */
-  void (*eip)(void);   /* 16: Return address. */
-  struct thread* cur;  /* 20: switch_threads()'s CUR argument. */
-  struct thread* next; /* 24: switch_threads()'s NEXT argument. */
+  unsigned long s0;    /*  0*REGBYTES: Saved S0/FP. */
+  unsigned long s1;    /*  1*REGBYTES: Saved S1. */
+  unsigned long s2;    /*  2*REGBYTES: Saved S2. */
+  unsigned long s3;    /*  3*REGBYTES: Saved S3. */
+  unsigned long s4;    /*  4*REGBYTES: Saved S4. */
+  unsigned long s5;    /*  5*REGBYTES: Saved S5. */
+  unsigned long s6;    /*  6*REGBYTES: Saved S6. */
+  unsigned long s7;    /*  7*REGBYTES: Saved S7. */
+  unsigned long s8;    /*  8*REGBYTES: Saved S8. */
+  unsigned long s9;    /*  9*REGBYTES: Saved S9. */
+  unsigned long s10;   /*  10*REGBYTES: Saved S10. */
+  unsigned long s11;   /*  11*REGBYTES: Saved S11. */
+  void (*ra)(void);    /*  12*REGBYTES: Return address. */
 };
 
 /* Switches from CUR, which must be the running thread, to NEXT,
@@ -20,7 +26,7 @@ struct thread* switch_threads(struct thread* cur, struct thread* next);
 
 /* Stack frame for switch_entry(). */
 struct switch_entry_frame {
-  void (*eip)(void);
+  void (*ra)(void);
 };
 
 void switch_entry(void);
@@ -31,7 +37,10 @@ void switch_thunk(void);
 #endif
 
 /* Offsets used by switch.S. */
-#define SWITCH_CUR 20
-#define SWITCH_NEXT 24
+#if __riscv_xlen == 32
+#define SWITCH_THREADS_FRAME_SIZE 52
+#else
+#define SWITCH_THREADS_FRAME_SIZE 104
+#endif /* __riscv_xlen */
 
 #endif /* threads/switch.h */

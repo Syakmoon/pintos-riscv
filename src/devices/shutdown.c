@@ -7,6 +7,7 @@
 #include "threads/io.h"
 #include "threads/thread.h"
 #include "threads/init.h"
+#include "threads/vaddr.h"
 #include "userprog/pagedir.h"
 #ifdef USERPROG
 #include "userprog/exception.h"
@@ -20,7 +21,7 @@
 #define CONTROL_REG 0x64
 
 /* Virtual address for QEMU to control the system. */
-uint8_t* QEMU_mmio_address = 0xf0001000L;
+uint8_t* QEMU_mmio_address = MMIO_START + PGSIZE;
 
 /* How to shut down when shutdown() is called. */
 static enum shutdown_type how = SHUTDOWN_NONE;

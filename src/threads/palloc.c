@@ -139,15 +139,12 @@ static void init_pool(struct pool* p, void* base, size_t page_cnt, const char* n
     PANIC("Not enough memory in %s for bitmap.", name);
   page_cnt -= bm_pages;
 
-  // printf("%zu pages available in %s.\n", page_cnt, name);
+  printf("%zu pages available in %s.\n", page_cnt, name);
 
   /* Initialize the pool. */
   lock_init(&p->lock);
   p->used_map = bitmap_create_in_buf(page_cnt, base, bm_pages * PGSIZE);
   p->base = base + bm_pages * PGSIZE;
-
-  // TEMP: remove this after loader is full-fledged
-  printf("%zu pages available in %s.\n", page_cnt, name);
 }
 
 /* Returns true if PAGE was allocated from POOL,
