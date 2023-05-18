@@ -107,7 +107,6 @@ static void init_paging(void) {
 static void load_supervisor_kernel(void) {
   struct block* device;
   uintptr_t position;
-  uint8_t buffer[BLOCK_SECTOR_SIZE];
 
   virtio_blks_init(POLL);
 

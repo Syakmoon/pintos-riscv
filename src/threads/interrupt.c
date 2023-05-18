@@ -290,7 +290,7 @@ void intr_handler(struct intr_frame* frame) {
      We can actually not restore CAUSE, but this is just in case. */
   if (external) {
     old_cause = frame->cause;
-    frame->cause -= EXTERNAL_OFFSET;
+    frame->cause = vec_no - EXTERNAL_OFFSET;
   }
 
   /* Invoke the interrupt's handler. */
@@ -380,5 +380,5 @@ void intr_dump_frame(const struct intr_frame* f) {
          f->t4, f->t5, f->t6);
 }
 
-/* Returns the name of interrupt VEC. */
+/* Returns the name of interrupt CAUSE. */
 const char* intr_name(long cause) { return intr_names[cause_to_vec_no(cause)]; }

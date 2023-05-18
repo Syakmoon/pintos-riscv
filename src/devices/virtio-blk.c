@@ -117,8 +117,6 @@ struct virtio_blk_req {
   uint32_t type;
   uint32_t reserved UNUSED;
   uint64_t sector;
-  uint8_t* data UNUSED;
-  uint8_t status UNUSED;
 };
 
 /* Virtio device response.
@@ -163,14 +161,18 @@ struct virtio_blk {
 static struct virtio_blk blks[VIRTIO_CNT];
 #define VIRTIO_MMIO_PHYS_START 0x10001000L
 
+#ifdef MACHINE
 /* Set of features we would NOT use in M-mode. */
-static const uint32_t M_excluded_features = VIRTIO_F_CONFIG_WCE |
-                                            VIRTIO_F_EVENT_IDX;
+static const uint32_t excluded_features = VIRTIO_F_CONFIG_WCE |
+                                          VIRTIO_F_EVENT_IDX;
 
+#else
 /* Set of features we would DEFINITELY NOT use in S-mode, or the kernel. */
-static const uint32_t S_excluded_features = VIRTIO_F_RO |
-                                            VIRTIO_F_CONFIG_WCE |
-                                            VIRTIO_F_EVENT_IDX;
+static const uint32_t excluded_features = VIRTIO_F_RO |
+                                          VIRTIO_F_CONFIG_WCE |
+                                          VIRTIO_F_EVENT_IDX;
+
+#endif
 
 static struct block_operations virtio_operations;
 
@@ -248,7 +250,7 @@ void virtio_blk_init(struct virtio_blk* blk, enum virtio_blk_mode mode) {
   outl(reg_status(blk), status |= STA_DRV);
 
   features = inl(reg_dev_features(blk));
-  features &= ~M_excluded_features;
+  features &= ~excluded_features;
   outl(reg_drv_features(blk), features);
   outl(reg_status(blk), status |= STA_F_OK);
 
@@ -402,6 +404,14 @@ static void dma_alloc(struct virtio_blk* blk) {
   #endif
 }
 
+static inline uintptr_t _vtop(const void *vaddr) {
+  #ifdef MACHINE
+  return vaddr;
+  #else
+  return vtop(vaddr);
+  #endif
+}
+
 /* Sets up the virtqueue for both the driver and the device. */
 static void virtqueue_setup(struct virtio_blk* blk) {
   /* The followings are the steps from the spec:
@@ -439,12 +449,12 @@ static void virtqueue_setup(struct virtio_blk* blk) {
   outl(reg_queue_num(blk), QUEUE_SIZE);
 
   /* The result of shifting by more than its bit width is undefined. */
-  outl(reg_desc_low(blk), (uint32_t) (((uintptr_t) blk->desc) & UINT32_MAX));
-  outl(reg_desc_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->desc) >> 32));
-  outl(reg_drv_low(blk), (uint32_t) (((uintptr_t) blk->avail) & UINT32_MAX));
-  outl(reg_drv_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->avail) >> 32));
-  outl(reg_dev_low(blk), (uint32_t) (((uintptr_t) blk->used) & UINT32_MAX));
-  outl(reg_dev_high(blk), (uint32_t) (bit32 ? 0 : ((uintptr_t) blk->used) >> 32));
+  outl(reg_desc_low(blk), (uint32_t) (_vtop(blk->desc) & UINT32_MAX));
+  outl(reg_desc_high(blk), (uint32_t) (bit32 ? 0 : _vtop(blk->desc) >> 32));
+  outl(reg_drv_low(blk), (uint32_t) (_vtop(blk->avail) & UINT32_MAX));
+  outl(reg_drv_high(blk), (uint32_t) (bit32 ? 0 : _vtop(blk->avail) >> 32));
+  outl(reg_dev_low(blk), (uint32_t) (_vtop(blk->used) & UINT32_MAX));
+  outl(reg_dev_high(blk), (uint32_t) (bit32 ? 0 : _vtop(blk->used) >> 32));
 
   outl(reg_queue_ready(blk), 0x1);
 }
@@ -537,7 +547,7 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
   /* We only recycle our earlier buffer here. */
   id = d->used->ring[d->last_seen_used % QUEUE_SIZE].id;
   ASSERT(id == head);
-  ASSERT(d->resp[id].status == VIRTIO_BLK_S_OK);
+  ASSERT(d->resp[desc_idx].status == VIRTIO_BLK_S_OK);
   recycle_desc(d, id);
   ++d->last_seen_used;
 
@@ -561,7 +571,7 @@ static void virtio_blk_read(void* d_, block_sector_t sec_no, void* buffer) {
    per-disk locking is unneeded. */
 static void virtio_blk_write(void* d_, block_sector_t sec_no, const void* buffer) {
   struct virtio_blk* d = d_;
-  virtio_blk_rw(d, sec_no, buffer, false);
+  virtio_blk_rw(d, sec_no, buffer, true);
 }
 
 static struct block_operations virtio_operations = {virtio_blk_read, virtio_blk_write};
@@ -649,7 +659,7 @@ static bool alloc_while_busy(struct virtio_blk* d, size_t cnt) {
 
 /* Selects the virtio block device according to IRQ. */
 static inline struct virtio_blk* select_device(long irq) {
-  return &blks[(size_t) irq];
+  return &blks[(size_t) irq - 1];
 }
 
 /* Virtio-blk nterrupt handler. */

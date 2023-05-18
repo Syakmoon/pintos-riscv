@@ -172,7 +172,7 @@ static void paging_init(void) {
     }
 
     if (machine)
-      pt[pte_idx] = pte_create_kernel(vaddr, PTE_R | PTE_W | PTE_X);
+      pt[pte_idx] = pte_create_kernel(vaddr, 0);
     else if (in_kernel_text)
       pt[pte_idx] = pte_create_kernel(vaddr, PTE_R | PTE_X);
     else

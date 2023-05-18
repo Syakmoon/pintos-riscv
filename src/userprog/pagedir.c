@@ -256,7 +256,7 @@ uint_t* active_pd(void) {
      See [riscv-priviledged-20211203] 4.1.11 "Supervisor Address Translation
      and Protection (satp) Register". */
   uintptr_t pd;
-  pd = (csr_read(CSR_SATP) & SATP32_PPN) << PGBITS;
+  pd = (csr_read(CSR_SATP) & SATP_PPN) << PGBITS;
   return ptov(pd);
 }
 
