@@ -186,10 +186,6 @@ static void plic_init(void) {
   outl(PLIC_S_PRIORITY, 0);
   outl(PLIC_M_PRIORITY, 1);
 
-  // TEMP: this is just for debugging, now?
-  /* Unmask all interrupts. */
-  outl(PLIC_S_ENABLE, (uint32_t) -1);
-
   /* Enables Supervisor externa interrupt. */
   csr_write(CSR_SIE, csr_read(CSR_SIE) | INT_SEI);
 }
@@ -272,7 +268,7 @@ void intr_handler(struct intr_frame* frame) {
             && (frame->cause & 0xf) == IRQ_S_SOFTWARE;
   m_timer = frame->cause < 0 
             && (frame->cause & 0xf) == IRQ_M_TIMER;
-  
+
   if (external || s_timer) {
     ASSERT(intr_get_level() == INTR_OFF);
     ASSERT(!intr_context());
@@ -280,28 +276,29 @@ void intr_handler(struct intr_frame* frame) {
     in_external_intr = true;
     yield_on_return = false;
   }
-  else if (!m_timer)
-    /* We should enable interrupt to keep consistent with x86 Pintos. */
-    intr_enable();
 
   uint8_t vec_no = cause_to_vec_no(frame->cause);
 
-  /* For interrupt handler to use its IRQ.
-     We can actually not restore CAUSE, but this is just in case. */
-  if (external) {
-    old_cause = frame->cause;
-    frame->cause = vec_no - EXTERNAL_OFFSET;
-  }
-
   /* Invoke the interrupt's handler. */
   handler = intr_handlers[vec_no];
-  if (handler != NULL)
+  if (handler != NULL) {
+    /* For interrupt handler to use its IRQ. */
+    if (external) {
+      old_cause = frame->cause;
+      frame->cause = vec_no - EXTERNAL_OFFSET;
+    }
+    else if (!m_timer && !s_timer)
+      /* We should enable interrupt to keep consistent with x86 Pintos. */
+      intr_enable();
+
     handler(frame);
+    
+    /* We can actually not restore CAUSE, but this is just in case. */
+    if (external)
+      frame->cause = old_cause;
+  }
   else
     unexpected_interrupt(frame);
-  
-  if (external)
-    frame->cause = old_cause;
 
   /* We shall not waste 1 clock period in the idle thread.
      If detect that the EPC is wfi (0x10500073) and we had interrupt enabled,
@@ -358,7 +355,7 @@ void intr_dump_frame(const struct intr_frame* f) {
      See [riscv-priviledged-20211203] 
      4.1.9 "Supervisor Trap Value (stval) Register". */
 
-  printf("Interrupt %#04x (%s) at epc=%p, cause %" PRIx "\n", vec_no, intr_names[vec_no], f->epc, f->cause);
+  printf("Interrupt %#04x (%s) at epc=%p, cause %08" PRIx "\n", vec_no, intr_names[vec_no], f->epc, f->cause);
   printf(" stval=%08" PRIx "\n", f->trap_val);
   printf(" ra=%08" PRIx " sp=%08" PRIx " gp=%08" PRIx " tp=%08" PRIx "\n", (unsigned long) f->ra,
          (unsigned long) f->sp, (unsigned long) f->gp, (unsigned long) f->tp);

@@ -38,7 +38,7 @@
 #include "devices/block.h"
 #include "devices/virtio-blk.h"
 #include "filesys/filesys.h"
-// #include "filesys/fsutil.h"
+#include "filesys/fsutil.h"
 #endif
 
 /* Page directory with kernel mappings only. */
@@ -111,7 +111,7 @@ int main(void* fdt UNUSED, size_t ram_pages) {
 
   /* Start thread scheduler and enable interrupts. */
   thread_start();
-  serial_init_queue();
+  // serial_init_queue();
   timer_calibrate();
 
 #ifdef USERPROG
@@ -146,6 +146,7 @@ static void bss_init(void) {
   memset(&_start_bss, 0, &_end_bss - &_start_bss);
 }
 
+extern char _end;
 /* Populates the base page directory and page table with the
    kernel virtual mapping, and then sets up the CPU to use the
    new page directory.  Points init_page_dir to the page
@@ -383,13 +384,13 @@ static void run_actions(char** argv) {
 #ifdef THREADS
       {"rtkt", 2, run_threads_kernel_task},
 #endif
-// #ifdef FILESYS
-//       {"ls", 1, fsutil_ls},
-//       {"cat", 2, fsutil_cat},
-//       {"rm", 2, fsutil_rm},
-//       {"extract", 1, fsutil_extract},
-//       {"append", 2, fsutil_append},
-// #endif
+#ifdef FILESYS
+      {"ls", 1, fsutil_ls},
+      {"cat", 2, fsutil_cat},
+      {"rm", 2, fsutil_rm},
+      {"extract", 1, fsutil_extract},
+      {"append", 2, fsutil_append},
+#endif
       {NULL, 0, NULL},
   };
 

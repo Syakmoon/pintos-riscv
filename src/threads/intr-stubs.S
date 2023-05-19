@@ -4,8 +4,16 @@
 /* Reference: riscv-pk/pk/entry.S */
 
         .text
-
-.macro save_gpr
+/* RISC-V requires TVEC to be 2^2 bytes aligned. */
+.align 2
+.globl intr_entry
+.func intr_entry
+intr_entry:
+   /* If the trap is from kernel, sp will get 0. */
+  csrrw sp, CSR_SCRATCH, sp
+  bnez sp, save_context
+  csrr sp, CSR_SCRATCH
+save_context:
   /* Saves caller's registers. */
   addi sp, sp, -INTR_FRAME_SIZE
   REG_S x1,  1*REGBYTES(sp)
@@ -38,9 +46,41 @@
   REG_S x29, 29*REGBYTES(sp)
   REG_S x30, 30*REGBYTES(sp)
   REG_S x31, 31*REGBYTES(sp)
-.endm
 
-.macro load_gpr
+  /* Saves other registers. */
+  csrr t0, CSR_EPC
+  csrrw t1, CSR_SCRATCH, x0   /* This also ensures CSR_SCRATCH to be 0. */
+  csrr t2, CSR_CAUSE
+  csrr t3, CSR_TVAL           /* For page fault etc. */
+  csrr t4, CSR_STATUS
+  REG_S t0, 0*REGBYTES(sp)
+  REG_S t1, 2*REGBYTES(sp)
+  REG_S t2, 32*REGBYTES(sp)
+  REG_S t3, 33*REGBYTES(sp)
+  REG_S t4, 34*REGBYTES(sp)
+  
+  /* S2 is a callee-saved register, so we can safely assume it is unchanged. */
+  csrr   s2, CSR_STATUS
+
+  /* Put sp, which points to `struct intr_frame`, to argument 0. */
+  mv a0, sp
+  call intr_handler
+.endfunc
+
+.globl intr_exit
+.func intr_exit
+intr_exit:
+  /* Loads other registers. */
+  REG_L t0, 0*REGBYTES(sp)
+  REG_L t4, 34*REGBYTES(sp)
+
+  /* It is important to restore SSTATUS first since this disables interrupt,
+     allowing SEPC to be unchanged.
+     M-mode does not enable interrupt while handling traps, 
+     therefore the order to restore does not matter. */
+  csrw CSR_STATUS, t4
+  csrw CSR_EPC, t0
+
   /* Restores caller's registers. */
   REG_L x1,  1*REGBYTES(sp)
   REG_L x3,  3*REGBYTES(sp)
@@ -72,130 +112,26 @@
   REG_L x30, 30*REGBYTES(sp)
   REG_L x31, 31*REGBYTES(sp)
 
-.endm
-
-/* RISC-V requires TVEC to be 2^2 bytes aligned. */
-.align 2
-.globl mintr_entry
-.func mintr_entry
-mintr_entry:
-   /* If the trap is from kernel, sp will get 0. */
-  csrrw sp, mscratch, sp
-  bnez sp, msave_context
-  csrr sp, mscratch
-msave_context:
-  save_gpr
-
-  /* Saves other registers. */
-  csrr t0, mepc
-  csrrw t1, mscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
-  csrr t2, mcause
-  csrr t3, mtval  /* For page fault etc. */
-  csrr t4, mstatus
-  REG_S t0, 0*REGBYTES(sp)
-  REG_S t1, 2*REGBYTES(sp)
-  REG_S t2, 32*REGBYTES(sp)
-  REG_S t3, 33*REGBYTES(sp)
-  REG_S t4, 34*REGBYTES(sp)
-  
-  /* S2 is a callee-saved register, so we can safely assume it is unchanged. */
-  csrr   s2,mstatus
-
-  /* Put sp, which points to `struct intr_frame`, to argument 0. */
-  mv a0, sp
-  call intr_handler
-.endfunc
-
-.globl mintr_exit
-.func mintr_exit
-mintr_exit:
-  /* Loads other registers. */
-  REG_L t0, 0*REGBYTES(sp)
-  REG_L t4, 34*REGBYTES(sp)
-  csrw mepc, t0
-
-  /* M-mode does not enable interrupt while handling traps, 
-     therefore the order to restore does not matter. */
-  csrw mstatus, t4
-
-  load_gpr
-
-  /* If we are trapping from kernel (Machine), do not restore CSR_SCRATCH. */
+  /* If we are trapping from kernel, do not restore CSR_SCRATCH. */
+  #ifdef MACHINE
   srli s2, s2, MSTATUS_MPP_BIT
   andi s2, s2, 2
-  bnez s2, 1f
-  addi sp, sp, INTR_FRAME_SIZE
-  csrw mscratch, sp
-  REG_L s2,  18*REGBYTES-INTR_FRAME_SIZE(sp)
-  REG_L sp,  2*REGBYTES-INTR_FRAME_SIZE(sp)
-  mret
-  j wfi_loop /* It should never return after mret */
-1:
-  REG_L s2,  18*REGBYTES(sp)
-  addi sp, sp, INTR_FRAME_SIZE
-  mret
-  j wfi_loop /* It should never return after mret */
-.endfunc
-
-.align 2
-.globl intr_entry
-.func intr_entry
-intr_entry:
-   /* If the trap is from kernel, sp will get 0. */
-  csrrw sp, sscratch, sp
-  bnez sp, save_context
-  csrr sp, sscratch
-save_context:
-  save_gpr
-
-  /* Saves other registers. */
-  csrr t0, sepc
-  csrrw t1, sscratch, x0   /* This also ensures CSR_SCRATCH to be 0. */
-  csrr t2, scause
-  csrr t3, stval  /* For page fault etc. */
-  csrr t4, sstatus
-  REG_S t0, 0*REGBYTES(sp)
-  REG_S t1, 2*REGBYTES(sp)
-  REG_S t2, 32*REGBYTES(sp)
-  REG_S t3, 33*REGBYTES(sp)
-  REG_S t4, 34*REGBYTES(sp)
-  
-  /* S2 is a callee-saved register, so we can safely assume it is unchanged. */
-  csrr   s2,sstatus
-
-  /* Put sp, which points to `struct intr_frame`, to argument 0. */
-  mv a0, sp
-  call intr_handler
-.endfunc
-
-.globl intr_exit
-.func intr_exit
-intr_exit:
-  /* Loads other registers. */
-  REG_L t0, 0*REGBYTES(sp)
-  REG_L t4, 34*REGBYTES(sp)
-
-  /* It is important to restore SSTATUS first since this disables interrupt,
-     allowing SEPC to be unchanged. */
-  csrw sstatus, t4
-  csrw sepc, t0
-
-  load_gpr
-
-  /* If we are trapping from kernel (Supervisor), do not restore CSR_SCRATCH. */
+  #else
   andi s2, s2, SSTATUS_SPP
+  #endif
   bnez s2, 1f
+
   addi sp, sp, INTR_FRAME_SIZE
-  csrw sscratch, sp
+  csrw CSR_SCRATCH, sp
   REG_L s2,  18*REGBYTES-INTR_FRAME_SIZE(sp)
   REG_L sp,  2*REGBYTES-INTR_FRAME_SIZE(sp)
-  sret
-  j wfi_loop /* It should never return after sret */
+  XRET
+  j wfi_loop /* It should never return after xret */
 1:
   REG_L s2,  18*REGBYTES(sp)
   addi sp, sp, INTR_FRAME_SIZE
-  sret
-  j wfi_loop /* It should never return after sret */
+  XRET
+  j wfi_loop /* It should never return after xret */
 .endfunc
 
 wfi_loop:

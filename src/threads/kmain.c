@@ -11,7 +11,7 @@
 #include "devices/shutdown.h"
 #include "userprog/pagedir.h"
 
-extern void mintr_entry();
+extern void intr_entry();
 
 void* fdt_ptr;
 size_t init_ram_pages;
@@ -147,7 +147,7 @@ static void machine_interrupt_init() {
   /* Enable Machine interrupts. */
   mstatus |= MSTATUS_MIE;
 
-  csr_write(CSR_MTVEC, mintr_entry);
+  csr_write(CSR_MTVEC, intr_entry);
   csr_write(CSR_MSTATUS, mstatus);
 
   asm volatile ("csrw mscratch, sp");

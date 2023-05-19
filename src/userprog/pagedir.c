@@ -9,9 +9,9 @@
 
 static void invalidate_pagedir(uint_t*);
 
-/* After PHYS_BASE, we set 0xf0000000 as the base for MMIO.
+/* After PHYS_BASE, we set MMIO_START as the base for MMIO.
    Because we have allocated the first two pages for serial and shutdown,
-   we set it to 0xf0002000. */
+   we set it to MMIO_START + 2 pages. */
 uintptr_t mmio_next_available = MMIO_START + 2 * PGSIZE;
 
 /* Creates a new page directory that has mappings for kernel
@@ -156,7 +156,7 @@ void* pagedir_set_mmio(uint_t* pd, void* base, size_t size, bool writable) {
     ASSERT(__pagedir_set_page(pd, mmio_next_available, (uintptr_t) base, rwx, true));
     base += PGSIZE;
     mmio_next_available += PGSIZE;
-    ASSERT(mmio_next_available > 0xf0000000);
+    ASSERT(mmio_next_available > MMIO_START);
   }
   return old;
 }

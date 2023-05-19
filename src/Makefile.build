@@ -46,7 +46,7 @@ lib_SRC += lib/stdlib.c			# Utility functions.
 lib_SRC += lib/string.c			# String functions.
 lib_SRC += lib/arithmetic.c		# 64-bit arithmetic for GCC.
 # lib_SRC += lib/float.c			# Floating point functions
-# lib_SRC += lib/ustar.c			# Unix standard tar format utilities.
+lib_SRC += lib/ustar.c			# Unix standard tar format utilities.
 
 # Kernel-specific library code.
 lib/kernel_SRC  = lib/kernel/debug.c	# Debug helpers.
@@ -71,7 +71,7 @@ filesys_SRC += filesys/free-map.c	# Free sector bitmap.
 filesys_SRC += filesys/file.c		# Files.
 filesys_SRC += filesys/directory.c	# Directories.
 filesys_SRC += filesys/inode.c		# File headers.
-# filesys_SRC += filesys/fsutil.c		# Utilities.
+filesys_SRC += filesys/fsutil.c		# Utilities.
 
 # Machine mode code.
 threads_MSRC  = threads/start.S		# Startup code.

@@ -39,6 +39,23 @@
 #define SSTATUS_SPP         0x00000100
 #define SSTATUS_SUM         0x00040000
 
+
+#ifdef MACHINE
+#define CSR_STATUS	CSR_MSTATUS
+#define CSR_SCRATCH	CSR_MSCRATCH
+#define CSR_EPC		CSR_MEPC
+#define CSR_CAUSE	CSR_MCAUSE
+#define CSR_TVAL	CSR_MTVAL
+#define XRET		mret
+#else
+#define CSR_STATUS	CSR_SSTATUS
+#define CSR_SCRATCH	CSR_SSCRATCH
+#define CSR_EPC		CSR_SEPC
+#define CSR_CAUSE	CSR_SCAUSE
+#define CSR_TVAL	CSR_STVAL
+#define XRET		sret
+#endif
+
 /* PMP configuration register. */
 #define PMP_CFG_R           0x01
 #define PMP_CFG_W           0x02
