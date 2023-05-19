@@ -1,5 +1,5 @@
 #include "tests/lib.h"
-#include <float.h>
+// #include <float.h>
 #include <random.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -64,21 +64,21 @@ static void swap(void* a_, void* b_, size_t size) {
   }
 }
 
-/* Pushes hardcoded values to the FPU */
-void push_values_to_fpu(int* values, int n) {
-  for (int i = 0; i < n; i++) {
-    fpu_push(values[i]);
-  }
-}
+// /* Pushes hardcoded values to the FPU */
+// void push_values_to_fpu(int* values, int n) {
+//   for (int i = 0; i < n; i++) {
+//     fpu_push(values[i]);
+//   }
+// }
 
-/* Pops hardcoded values from FPU and returns if the values are correct */
-bool pop_values_from_fpu(int* values, int n) {
-  for (int i = n - 1; i >= 0; i--) {
-    if (values[i] != fpu_pop())
-      return false;
-  }
-  return true;
-}
+// /* Pops hardcoded values from FPU and returns if the values are correct */
+// bool pop_values_from_fpu(int* values, int n) {
+//   for (int i = n - 1; i >= 0; i--) {
+//     if (values[i] != fpu_pop())
+//       return false;
+//   }
+//   return true;
+// }
 
 /* Initializes a lock and checks return value */
 void lock_check_init(lock_t* lock) {

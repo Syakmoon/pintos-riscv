@@ -9,7 +9,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-// #include <test-lib.h>
+#include <test-lib.h>
 // #include "devices/kbd.h"
 #include "devices/input.h"
 #include "devices/serial.h"
@@ -32,7 +32,7 @@
 // #include "tests/userprog/kernel/tests.h"
 #endif
 #ifdef THREADS
-// #include "tests/threads/tests.h"
+#include "tests/threads/tests.h"
 #endif
 #ifdef FILESYS
 #include "devices/block.h"
@@ -360,7 +360,7 @@ static void run_threads_kernel_task(char** argv) {
   const char* task = argv[1];
 
   printf("Executing '%s':\n", task);
-  // run_threads_test(task);
+  run_threads_test(task);
   printf("Execution of '%s' complete.\n", task);
 }
 #endif

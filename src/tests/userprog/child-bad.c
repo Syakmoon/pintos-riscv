@@ -5,8 +5,10 @@
 
 #include "tests/lib.h"
 #include "tests/main.h"
+#include <syscall.h>
 
 void test_main(void) {
-  asm volatile("movl $0x20101234, %esp; int $0x30");
+  // asm volatile("movl $0x20101234, %esp; int $0x30");
+  exec((char*) 0x20101234);
   fail("should have exited with -1");
 }
