@@ -22,13 +22,14 @@ static int64_t ticks;
 static unsigned loops_per_tick;
 
 static intr_handler_func timer_interrupt;
-static intr_handler_func timer_interrupt_machine;
 static bool too_many_loops(unsigned loops);
 static void busy_wait(int64_t loops);
 static void real_time_sleep(int64_t num, int32_t denom);
 static void real_time_delay(int64_t num, int32_t denom);
 
 #ifdef MACHINE
+static intr_handler_func timer_interrupt_machine;
+
 /* Sets up the timer to interrupt TIMER_FREQ times per second,
    and registers the corresponding Machine interrupt. */
 void timer_init_machine(void) {
@@ -47,7 +48,7 @@ static void timer_interrupt_machine(struct intr_frame* args UNUSED) {
   *(unsigned long*) CLINT_MTIMECMP += TIMER_INTERVAL;
 
   /* We set up SSIP so that Supervisor can handler the timer interrupt.  */
-  csr_write(CSR_MIP, csr_read(CSR_MIP) | (1 << IRQ_S_SOFTWARE));
+  csr_write(CSR_MIP, (1 << IRQ_S_SOFTWARE));
 }
 
 #else

@@ -16,7 +16,7 @@
 #include "devices/shutdown.h"
 #include "devices/timer.h"
 // #include "devices/vga.h"
-// #include "devices/rtc.h"
+#include "devices/rtc.h"
 #include "threads/interrupt.h"
 #include "threads/io.h"
 #include "threads/loader.h"
@@ -111,7 +111,7 @@ int main(void* fdt UNUSED, size_t ram_pages) {
 
   /* Start thread scheduler and enable interrupts. */
   thread_start();
-  // serial_init_queue();
+  serial_init_queue();
   timer_calibrate();
 
 #ifdef USERPROG
@@ -129,7 +129,7 @@ int main(void* fdt UNUSED, size_t ram_pages) {
   printf("Boot complete.\n");
 
   /* Run actions specified on kernel command line. */
-  // run_actions(argv);
+  run_actions(argv);
 
   /* Finish up. */
   shutdown();
@@ -327,7 +327,7 @@ static char** parse_options(char** argv) {
      initial time to a predictable value, not to the local time,
      for reproducibility.  To fix this, give the "-r" option to
      the pintos script to request real-time execution. */
-  // random_init(rtc_get_time());
+  random_init(rtc_get_time());
 
   return argv;
 }

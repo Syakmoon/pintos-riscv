@@ -51,6 +51,8 @@ static unsigned int unexpected_cnt[INTR_CNT];
 static bool in_external_intr; /* Are we processing an external interrupt? */
 static bool yield_on_return;  /* Should we yield on interrupt return? */
 
+static uint8_t current_vec_no;
+
 /* Platform-Level Interrupt Controller helpers. */
 static void plic_init(void);
 static void plic_register(int irq, uint32_t priority);
@@ -231,7 +233,7 @@ static int plic_claim(void) {
    an interrupt source that is currently enabled for the target, 
    the completion is silently ignored.  */
 static void plic_end_of_interrupt(int irq) {
-  ASSERT(irq >= 0 && irq < 64);
+  ASSERT(irq > 0 && irq < 64);
 
   /* Acknowledge the IRQ. */
   outl(PLIC_S_COMPLETE, irq);
@@ -277,7 +279,7 @@ void intr_handler(struct intr_frame* frame) {
     yield_on_return = false;
   }
 
-  uint8_t vec_no = cause_to_vec_no(frame->cause);
+  uint8_t vec_no = current_vec_no = cause_to_vec_no(frame->cause);
 
   /* Invoke the interrupt's handler. */
   handler = intr_handlers[vec_no];
@@ -331,7 +333,7 @@ void intr_handler(struct intr_frame* frame) {
 /* Handles an unexpected interrupt with interrupt frame F.  An
    unexpected interrupt is one that has no registered handler. */
 static void unexpected_interrupt(const struct intr_frame* f) {
-  uint8_t vec_no = cause_to_vec_no(f->cause);
+  uint8_t vec_no = current_vec_no;
 
   /* Count the number so far. */
   unsigned int n = ++unexpected_cnt[vec_no];
@@ -349,7 +351,7 @@ static void unexpected_interrupt(const struct intr_frame* f) {
 
 /* Dumps interrupt frame F to the console, for debugging. */
 void intr_dump_frame(const struct intr_frame* f) {
-  uint8_t vec_no = cause_to_vec_no(f->cause);
+  uint8_t vec_no = current_vec_no;
 
   /* stval is the linear address of the last page fault.
      See [riscv-priviledged-20211203] 

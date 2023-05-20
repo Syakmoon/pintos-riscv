@@ -1,5 +1,7 @@
 #include <syscall.h>
 #include "../syscall-nr.h"
+#include <riscv.h>
+#include <stdint.h>
 #include <pthread.h>
 
 // /* Invokes syscall NUMBER, passing no arguments, and returns the
@@ -69,6 +71,12 @@
 #define syscall0(NUMBER)                                                                           \
   ({                                                                                               \
     int retval;                                                                                    \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(a0)                                                                        \
+                 :                                                                                 \
+                 : "memory");                                                                      \
+    retval = a0;                                                                                   \
     retval;                                                                                        \
   })
 
@@ -77,6 +85,13 @@
 #define syscall1(NUMBER, ARG0)                                                                     \
   ({                                                                                               \
     int retval;                                                                                    \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(a0)                                                                        \
+                 : "r"(a1)                                                                         \
+                 : "memory");                                                                      \
+    retval = a0;                                                                                   \
     retval;                                                                                        \
   })
 
@@ -93,6 +108,14 @@
 #define syscall2(NUMBER, ARG0, ARG1)                                                               \
   ({                                                                                               \
     int retval;                                                                                    \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
+    register uintptr_t a2 asm ("a2") = (uintptr_t)(ARG1);                                          \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(a0)                                                                        \
+                 : "r"(a1), "r"(a2)                                                                \
+                 : "memory");                                                                      \
+    retval = a0;                                                                                   \
     retval;                                                                                        \
   })
 
@@ -101,6 +124,15 @@
 #define syscall3(NUMBER, ARG0, ARG1, ARG2)                                                         \
   ({                                                                                               \
     int retval;                                                                                    \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
+    register uintptr_t a2 asm ("a2") = (uintptr_t)(ARG1);                                          \
+    register uintptr_t a3 asm ("a3") = (uintptr_t)(ARG2);                                          \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(a0)                                                                        \
+                 : "r"(a1), "r"(a2), "r"(a3)                                                       \
+                 : "memory");                                                                      \
+    retval = a0;                                                                                   \
     retval;                                                                                        \
   })
 
