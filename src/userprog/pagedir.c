@@ -96,7 +96,7 @@ bool __pagedir_set_page(uint_t* pd, void* vaddr, void* paddr, uint_t rwx, bool g
   ASSERT(pg_ofs(paddr) == 0);
   if (!general) {
     ASSERT(is_user_vaddr(vaddr));
-    ASSERT(vtop(paddr) >> PTSHIFT < init_ram_pages);
+    ASSERT((vtop(paddr) - KERNEL_PHYS_BASE) >> PTSHIFT < init_ram_pages);
     ASSERT(pd != init_page_dir);
   }
 
