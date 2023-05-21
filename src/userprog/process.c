@@ -23,8 +23,8 @@
 static struct semaphore temporary;
 static thread_func start_process NO_RETURN;
 static thread_func start_pthread NO_RETURN;
-static bool load(const char* file_name, void (**epc)(void), void** sp);
-bool setup_thread(void (**epc)(void), void** sp);
+static bool load(const char* file_name, struct intr_frame*);
+bool setup_thread(struct intr_frame*);
 
 /* Initializes user programs in the system by ensuring the main
    thread has a minimal PCB so that it can execute and wait for
@@ -104,7 +104,7 @@ static void start_process(void* file_name_) {
     if_.status = (csr_read(CSR_SSTATUS) & ~SSTATUS_SPP & ~SSTATUS_SIE)
                   | SSTATUS_SPIE | SSTATUS_SUM;
 
-    success = load(file_name, &if_.epc, &if_.sp);
+    success = load(file_name, &if_);
   }
 
   /* Handle failure with succesful PCB malloc. Must free the PCB */
@@ -154,7 +154,7 @@ int process_wait(pid_t child_pid UNUSED) {
 /* Free the current process's resources. */
 void process_exit(void) {
   struct thread* cur = thread_current();
-  uint32_t* pd;
+  uint_t* pd;
 
   /* If this thread does not have a PCB, don't worry */
   if (cur->pcb == NULL) {
@@ -263,7 +263,7 @@ struct Elf32_Phdr {
 #define PF_W 2 /* Writable. */
 #define PF_R 4 /* Readable. */
 
-static bool setup_stack(void** sp);
+static bool setup_stack(struct intr_frame*);
 static bool validate_segment(const struct Elf32_Phdr*, struct file*);
 static bool load_segment(struct file* file, off_t ofs, uint8_t* upage, uint32_t read_bytes,
                          uint32_t zero_bytes, uint_t rwx);
@@ -272,7 +272,7 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage, uint32_t 
    Stores the executable's entry point into *EPC
    and its initial stack pointer into *SP.
    Returns true if successful, false otherwise. */
-bool load(const char* file_name, void (**epc)(void), void** sp) {
+bool load(const char* file_name, struct intr_frame* if_) {
   struct thread* t = thread_current();
   struct Elf32_Ehdr ehdr;
   struct file* file = NULL;
@@ -354,11 +354,11 @@ bool load(const char* file_name, void (**epc)(void), void** sp) {
   }
 
   /* Set up stack. */
-  if (!setup_stack(sp))
+  if (!setup_stack(if_))
     goto done;
 
   /* Start address. */
-  *epc = (void (*)(void))ehdr.e_entry;
+  if_->epc = (void (*)(void))ehdr.e_entry;
 
   success = true;
 
@@ -471,7 +471,7 @@ static bool load_segment(struct file* file, off_t ofs, uint8_t* upage, uint32_t 
 
 /* Create a minimal stack by mapping a zeroed page at the top of
    user virtual memory. */
-static bool setup_stack(void** sp) {
+static bool setup_stack(struct intr_frame* if_) {
   uint8_t* kpage;
   bool success = false;
 
@@ -479,7 +479,7 @@ static bool setup_stack(void** sp) {
   if (kpage != NULL) {
     success = install_page(((uint8_t*)PHYS_BASE) - PGSIZE, kpage, PTE_R | PTE_W);
     if (success)
-      *sp = PHYS_BASE;
+      if_->sp = PHYS_BASE;
     else
       palloc_free_page(kpage);
   }
@@ -518,7 +518,7 @@ pid_t get_pid(struct process* p) { return (pid_t)p->main_thread->tid; }
    This function will be implemented in Project 2: Multithreading. For
    now, it does nothing. You may find it necessary to change the
    function signature. */
-bool setup_thread(void (**epc)(void) UNUSED, void** sp UNUSED) { return false; }
+bool setup_thread(struct intr_frame* if_) { return false; }
 
 /* Starts a new thread with a new user stack running SF, which takes
    TF and ARG as arguments on its user stack. This new thread may be
