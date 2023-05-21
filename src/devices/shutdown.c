@@ -1,6 +1,7 @@
 #include "devices/shutdown.h"
 #include <console.h>
 #include <stdio.h>
+#include <riscv.h>
 #include "devices/kbd.h"
 #include "devices/serial.h"
 #include "devices/timer.h"
@@ -39,7 +40,7 @@ void shutdown(void) {
   /* None of those worked. */
   printf("still running...\n");
   for (;;)
-    ;
+    wfi();
 }
 
 #else
@@ -97,7 +98,7 @@ void shutdown_reboot(void) {
 }
 
 /* Powers down the machine we're running on,
-   as long as we're running on Bochs or QEMU. */
+   as long as we're running on QEMU. */
 void shutdown_power_off(void) {
   const char s[] = "Shutdown";
   const char* p;
@@ -117,7 +118,7 @@ void shutdown_power_off(void) {
   /* None of those worked. */
   printf("still running...\n");
   for (;;)
-    ;
+    wfi();
 }
 
 /* Print statistics about Pintos execution. */

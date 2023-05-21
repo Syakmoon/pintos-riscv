@@ -133,11 +133,17 @@ static void load_supervisor_kernel(void) {
     ASSERT(device != NULL);
   }
 
+  printf("Loading");
   /* Load the kernel ELF file. */
   for (block_sector_t i = 0; i < block_size(device); ++i) {
     block_read(device, i, kernel_position);
     kernel_position += BLOCK_SECTOR_SIZE;
+
+    /* Print '.' as progress indicator once every 16 sectors == 8 kB. */
+    if (!(i & 0xf))
+      printf(".");
   }
+  printf("\n");
 }
 
 /* Sets up the Machine trap handler and enables interrupts. */
