@@ -100,6 +100,13 @@
 #define syscall1f(NUMBER, ARG0)                                                                    \
   ({                                                                                               \
     float retval;                                                                                  \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    register double f0 asm ("f0");                                                                 \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(f0)                                                                        \
+                 : "r"(a0)                                                                         \
+                 : "memory");                                                                      \
+    retval = f0;                                                                                   \
     retval;                                                                                        \
   })
 
