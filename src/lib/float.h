@@ -65,6 +65,11 @@ static fpu_read_func fpu_read_arr[] = {
   FPU_READ_28, FPU_READ_29, FPU_READ_30, FPU_READ_31
 };
 
+struct fpu_regs {
+  unsigned int fcsr;
+  double f[32];
+};
+
 /* Writes integer num to the FPU idx */
 static inline void fpu_write(int num, int idx) {
   fpu_write_arr[idx](num);
@@ -76,7 +81,7 @@ static inline int fpu_read(int idx) {
 }
 
 /* Saves all FPU registers and FCSR to regs' memory location */
-static void fsave(long long* regs) {
+static void fsave(struct fpu_regs* regs) {
   /* Project code */
 }
 

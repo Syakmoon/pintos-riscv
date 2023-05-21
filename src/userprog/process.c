@@ -133,7 +133,7 @@ static void start_process(void* file_name_) {
   asm volatile("mv t0, %0\n\t"
                XSTR(REG_S) " t0, 0(sp)\n\t"
                XSTR(REG_L) " sp, 0(sp)\n\t"
-               "j intr_exit" : : "g"(&if_), "g" (REGBYTES): "memory");
+               "j intr_exit" : : "g"(&if_), "g" (REGBYTES): "memory", "t0");
   NOT_REACHED();
 }
 
