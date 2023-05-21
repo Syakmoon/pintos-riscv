@@ -74,7 +74,7 @@
     register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
     asm volatile("ecall"                                                                           \
                  : "+r"(a0)                                                                        \
-                 :                                                                                 \
+                 : "r"(a0)                                                                         \
                  : "memory");                                                                      \
     retval = a0;                                                                                   \
     retval;                                                                                        \
@@ -89,7 +89,7 @@
     register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
     asm volatile("ecall"                                                                           \
                  : "+r"(a0)                                                                        \
-                 : "r"(a1)                                                                         \
+                 : "r"(a0), "r"(a1)                                                                \
                  : "memory");                                                                      \
     retval = a0;                                                                                   \
     retval;                                                                                        \
@@ -101,12 +101,15 @@
   ({                                                                                               \
     float retval;                                                                                  \
     register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
-    register double fa0 asm ("fa0");                                                               \
+    register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
     asm volatile("ecall"                                                                           \
-                 : "+r"(fa0)                                                                       \
-                 : "r"(a0)                                                                         \
+                 : "+r"(a0)                                                                        \
+                 : "r"(a0), "r"(a1)                                                                \
                  : "memory");                                                                      \
-    retval = fa0;                                                                                  \
+    asm volatile("sw a0, %0"                                                                       \
+                 :                                                                                 \
+                 : "m"(retval)                                                                     \
+                 : "memory");                                                                      \
     retval;                                                                                        \
   })
 
@@ -120,7 +123,7 @@
     register uintptr_t a2 asm ("a2") = (uintptr_t)(ARG1);                                          \
     asm volatile("ecall"                                                                           \
                  : "+r"(a0)                                                                        \
-                 : "r"(a1), "r"(a2)                                                                \
+                 : "r"(a0), "r"(a1), "r"(a2)                                                       \
                  : "memory");                                                                      \
     retval = a0;                                                                                   \
     retval;                                                                                        \
@@ -137,7 +140,7 @@
     register uintptr_t a3 asm ("a3") = (uintptr_t)(ARG2);                                          \
     asm volatile("ecall"                                                                           \
                  : "+r"(a0)                                                                        \
-                 : "r"(a1), "r"(a2), "r"(a3)                                                       \
+                 : "r"(a0), "r"(a1), "r"(a2), "r"(a3)                                              \
                  : "memory");                                                                      \
     retval = a0;                                                                                   \
     retval;                                                                                        \

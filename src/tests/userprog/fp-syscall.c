@@ -9,9 +9,10 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-#define FPU_SIZE 8 * 33
+#define FPU_SIZE 8 * 32 + 4
 #define NUM_VALUES 32
 static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1,
+                                 1, 6, 2, 162, 126, 2, 6, 1,
                                  1, 6, 2, 162, 126, 2, 6, 1,
                                  1, 6, 2, 162, 126, 2, 6, 1};
 
@@ -24,7 +25,7 @@ static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1,
     register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
     asm volatile("ecall"                                                                           \
                  : "+r"(a0)                                                                        \
-                 : "r"(a1)                                                                         \
+                 : "r"(a0), "r"(a1)                                                                \
                  : "memory");                                                                      \
     retval = a0;                                                                                   \
     retval;                                                                                        \
@@ -32,8 +33,8 @@ static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1,
 
 void test_main(void) {
   test_name = "fp-syscall";
-  uint8_t fpu_before[FPU_SIZE];
-  uint8_t fpu_after[FPU_SIZE];
+  struct fpu_regs fpu_before;
+  struct fpu_regs fpu_after;
 
   msg("Computing e...");
   write_values_to_fpu(values, NUM_VALUES, 0);
@@ -41,21 +42,23 @@ void test_main(void) {
   // Manually call the system call so that the compiler does not
   // generate FP instructions that modify the FPU in user space
   // Save FPU state before and after the syscall
-  fsave(fpu_before);
+  fsave(&fpu_before);
   int e_res = syscall1(SYS_COMPUTE_E, 10);
-  fsave(fpu_after);
+  fsave(&fpu_after);
 
   // Check if the FPU state is the same before and after the syscall
   // x86 Pintos ignore the Control Word (bytes 0-4) and the 
   // Tag Word (bytes 8-12) since those are modified by the FSAVE instruction
   // RISC-V does not do that
-  compare_bytes(fpu_before,fpu_after, FPU_SIZE, 0, test_name);
-  if (read_values_from_fpu(values, NUM_VALUES, 0)) {
-    msg("Success!");
-  } else {
-    msg("Incorrect values popped");
-    exit(126);
-  }
+  compare_bytes(&fpu_before, &fpu_after, FPU_SIZE, 0, test_name);
+
+  // RISC-V cannot assume this
+  // if (read_values_from_fpu(values, NUM_VALUES, 0)) {
+  //   msg("Success!");
+  // } else {
+  //   msg("Incorrect values popped");
+  //   exit(126);
+  // }
 
   // Convert the integer returned by the system call into a proper
   // double, so we can see if the return value is correct

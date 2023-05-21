@@ -469,10 +469,13 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
   struct virtio_blk_req* req;
   uint16_t desc_idx, head;
   uint32_t id;
+  uint8_t local_buffer[BLOCK_SECTOR_SIZE];
 
   #ifndef MACHINE
   lock_acquire(&d->lock);
   #endif
+
+  memcpy((void*) local_buffer, buffer, BLOCK_SECTOR_SIZE);
 
   /* In our design, we always allocate 3 */
   head = desc_idx = d->next_desc_idx;
@@ -500,7 +503,7 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
             VIRTQ_DESC_F_NEXT, desc_idx = (desc_idx + 1) % QUEUE_SIZE);
   
   /* Our request body. */
-  write_desc(&d->desc[desc_idx], ((uintptr_t) buffer) & SIZE_MAX, BLOCK_SECTOR_SIZE,
+  write_desc(&d->desc[desc_idx], ((uintptr_t) local_buffer) & SIZE_MAX, BLOCK_SECTOR_SIZE,
             VIRTQ_DESC_F_NEXT | (write ? 0 : VIRTQ_DESC_F_WRITE),
             desc_idx = (desc_idx + 1) % QUEUE_SIZE);
   
@@ -550,6 +553,8 @@ static void virtio_blk_rw(struct virtio_blk* d, block_sector_t sec_no, void* buf
   ASSERT(d->resp[desc_idx].status == VIRTIO_BLK_S_OK);
   recycle_desc(d, id);
   ++d->last_seen_used;
+
+  memcpy(buffer, (void*) local_buffer, BLOCK_SECTOR_SIZE);
 
   #ifndef MACHINE
   lock_release(&d->lock);

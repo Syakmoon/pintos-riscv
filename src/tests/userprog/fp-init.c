@@ -5,7 +5,7 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-#define FPU_SIZE 108
+#define FPU_SIZE 8 * 32 + 4
 
 void test_main(void) {
   test_name = "fp-init";

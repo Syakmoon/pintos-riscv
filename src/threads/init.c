@@ -349,7 +349,7 @@ static void run_userprog_kernel_task(char** argv) {
 
   printf("Executing '%s':\n", task);
 #ifdef USERPROG
-  // run_userprog_test(task);
+  run_userprog_test(task);
 #endif
   printf("Execution of '%s' complete.\n", task);
 }

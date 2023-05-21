@@ -8,9 +8,10 @@
 #include "threads/thread.h"
 #include "threads/synch.h"
 
-#define FPU_SIZE 8 * 33
+#define FPU_SIZE 8 * 32 + 4
 #define NUM_VALUES 32
 static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1,
+                                 1, 6, 2, 162, 126, 2, 6, 1,
                                  1, 6, 2, 162, 126, 2, 6, 1,
                                  1, 6, 2, 162, 126, 2, 6, 1};
 struct semaphore check_done;
