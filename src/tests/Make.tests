@@ -14,7 +14,7 @@ include $(patsubst %,$(SRCDIR)/%/Make.tests,$(TEST_SUBDIRS))
 # 	$(CC) -m32 -c $< -o $@ $(CFLAGS) $(CPPFLAGS) -fomit-frame-pointer $(WARNINGS) $(DEFINES) $(DEPS)
 
 tests/filesys/extended/dir-vine.o: tests/filesys/extended/dir-vine.c
-	$(CC) -m32 -c $< -o $@ $(subst -O0,-O1,$(CFLAGS)) $(CPPFLAGS) $(WARNINGS) $(DEFINES) $(DEPS)
+	$(CC) -c $< -o $@ $(subst -O0,-O1,$(CFLAGS)) $(CPPFLAGS) $(WARNINGS) $(DEFINES) $(DEPS)
 
 PROGS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_PROGS))
 TESTS = $(foreach subdir,$(TEST_SUBDIRS),$($(subdir)_TESTS))
