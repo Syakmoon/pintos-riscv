@@ -9,19 +9,24 @@
 #include "tests/lib.h"
 #include "tests/main.h"
 
-#define FPU_SIZE 108
-#define NUM_VALUES 8
-static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1};
+#define FPU_SIZE 8 * 33
+#define NUM_VALUES 32
+static int values[NUM_VALUES] = {1, 6, 2, 162, 126, 2, 6, 1,
+                                 1, 6, 2, 162, 126, 2, 6, 1,
+                                 1, 6, 2, 162, 126, 2, 6, 1};
 
 /* Invokes syscall NUMBER, passing argument ARG0, and returns the
    return value as an `int'. */
 #define syscall1(NUMBER, ARG0)                                                                     \
   ({                                                                                               \
     int retval;                                                                                    \
-    asm volatile("pushl %[arg0]; pushl %[number]; int $0x30; addl $8, %%esp"                       \
-                 : "=a"(retval)                                                                    \
-                 : [number] "i"(NUMBER), [arg0] "g"(ARG0)                                          \
+    register uintptr_t a0 asm ("a0") = (uintptr_t)(NUMBER);                                        \
+    register uintptr_t a1 asm ("a1") = (uintptr_t)(ARG0);                                          \
+    asm volatile("ecall"                                                                           \
+                 : "+r"(a0)                                                                        \
+                 : "r"(a1)                                                                         \
                  : "memory");                                                                      \
+    retval = a0;                                                                                   \
     retval;                                                                                        \
   })
 
@@ -31,20 +36,21 @@ void test_main(void) {
   uint8_t fpu_after[FPU_SIZE];
 
   msg("Computing e...");
-  push_values_to_fpu(values, NUM_VALUES);
+  write_values_to_fpu(values, NUM_VALUES, 0);
 
   // Manually call the system call so that the compiler does not
   // generate FP instructions that modify the FPU in user space
   // Save FPU state before and after the syscall
-  asm("fsave (%0)" : : "g"(&fpu_before));
+  fsave(fpu_before);
   int e_res = syscall1(SYS_COMPUTE_E, 10);
-  asm("fsave (%0)" : : "g"(&fpu_after));
+  fsave(fpu_after);
 
   // Check if the FPU state is the same before and after the syscall
-  // Ignore the Control Word (bytes 0-4) and the Tag Word (bytes 8-12)
-  // since those are modified by the FSAVE instruction
-  compare_bytes(&fpu_before[12], &fpu_after[12], FPU_SIZE - 12, 0, test_name);
-  if (pop_values_from_fpu(values, NUM_VALUES)) {
+  // x86 Pintos ignore the Control Word (bytes 0-4) and the 
+  // Tag Word (bytes 8-12) since those are modified by the FSAVE instruction
+  // RISC-V does not do that
+  compare_bytes(fpu_before,fpu_after, FPU_SIZE, 0, test_name);
+  if (read_values_from_fpu(values, NUM_VALUES, 0)) {
     msg("Success!");
   } else {
     msg("Incorrect values popped");

@@ -35,8 +35,8 @@ void fail(const char*, ...) PRINTF_FORMAT(1, 2) NO_RETURN;
       fail(__VA_ARGS__);                                                                           \
   } while (0)
 
-// void push_values_to_fpu(int* values, int n);
-// bool pop_values_from_fpu(int* values, int n);
+void write_values_to_fpu(int* values, int n, int from);
+bool read_values_from_fpu(int* values, int n, int from);
 
 void lock_check_init(lock_t* lock);
 void sema_check_init(sema_t* sema, int val);

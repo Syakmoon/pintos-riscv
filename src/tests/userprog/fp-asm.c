@@ -11,9 +11,9 @@ static int values[NUM_VALUES] = {1, 6, 2, 162};
 void test_main(void) {
   test_name = "fp-asm";
   msg("Starting...");
-  push_values_to_fpu(values, NUM_VALUES);
+  write_values_to_fpu(values, NUM_VALUES, 0);
   wait(exec("fp-asm-helper"));
-  if (pop_values_from_fpu(values, NUM_VALUES))
+  if (read_values_from_fpu(values, NUM_VALUES, 0))
     exit(162);
   else
     exit(126);
