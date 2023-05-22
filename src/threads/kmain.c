@@ -104,6 +104,7 @@ static void init_paging(void) {
   sfence_vma();
 }
 
+/* Reads Pintos main kernel from the disk. */
 static void load_supervisor_kernel(void) {
   struct block* device;
   uintptr_t position;
@@ -176,7 +177,6 @@ static void return_to_supervisor() {
   uintptr_t init_main = KERNEL_PHYS_BASE + LOADER_KERN_BASE + 0x18;
   init_main = *(uintptr_t*) init_main;
 
-  // TEMP: we pretend that timer interrupt won't not happen before mret
   /* Set up the init thread's stack. */
   asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
 
@@ -215,7 +215,4 @@ void kmain(int hart UNUSED, void* fdt) {
 
   /* Switch to Supervisor mode. */
   return_to_supervisor();
-
-  /* It should never return to this function. */
-  NOT_REACHED();
 }

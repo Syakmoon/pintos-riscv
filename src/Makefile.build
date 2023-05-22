@@ -23,7 +23,6 @@ threads_SRC += threads/palloc.c		# Page allocator.
 threads_SRC += threads/malloc.c		# Subpage allocator.
 
 # Device driver code.
-# devices_SRC  = devices/pit.c		# Programmable interrupt timer chip.
 devices_SRC = devices/timer.c		# Periodic timer device.
 # devices_SRC += devices/kbd.c		# Keyboard device.
 # devices_SRC += devices/vga.c		# Video device.
@@ -31,7 +30,6 @@ devices_SRC += devices/serial.c		# Serial port device.
 devices_SRC += devices/block.c		# Block device abstraction layer.
 devices_SRC += devices/partition.c	# Partition block device.
 devices_SRC += devices/virtio-blk.c	# Virtio disk block device.
-devices_SRC += devices/ide.c		# IDE disk block device.
 devices_SRC += devices/input.c		# Serial and keyboard input.
 devices_SRC += devices/intq.c		# Interrupt queue.
 devices_SRC += devices/rtc.c		# Real-time clock.

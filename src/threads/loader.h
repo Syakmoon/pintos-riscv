@@ -11,8 +11,9 @@
 /* Kernel physical address base. Fixed by QEMU. */
 #define KERNEL_PHYS_BASE 0x80000000 /* 2 GB. */
 
-/* The amount of physical ram we provide to Pintos. */
-#define MEM_LENGTH 0x4000000  /* 64MB */
+/* The amount of physical ram we provide to Pintos.
+   4MB is chosen to pass the multi-oom tests. */
+#define MEM_LENGTH 0x400000  /* 4MB. */
 
 /* For booting arguments. */
 #define LOADER_END KERNEL_PHYS_BASE + LOADER_KERN_BASE  /* Physical address of end of loader. */
