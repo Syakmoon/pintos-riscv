@@ -29,7 +29,7 @@
 #include "userprog/process.h"
 #include "userprog/exception.h"
 #include "userprog/syscall.h"
-// #include "tests/userprog/kernel/tests.h"
+#include "tests/userprog/kernel/tests.h"
 #endif
 #ifdef THREADS
 #include "tests/threads/tests.h"
