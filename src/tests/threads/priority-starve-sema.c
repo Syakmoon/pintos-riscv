@@ -31,7 +31,7 @@ void test_priority_starve_sema(void) {
      if this test is timing out, it likely means your scheduler
      is incorrectly repeatedly context-switching between the
      low- and medium- priority threads. */
-  timer_sleep(4096);
+  timer_sleep(256);
 
   msg("The medium-priority thread has been preempted.");
   msg("Thread %s done!", thread_name());

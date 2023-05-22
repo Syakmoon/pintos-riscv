@@ -9,7 +9,7 @@
 #define CLINT_MTIMECMP (CLINT + 0x4000) /* We have only one HART. */
 
 /* Number of timer interrupts per second. */
-#define TIMER_FREQ 20
+#define TIMER_FREQ 100
 
 /* QEMU timebase frequency. */
 #define QEMU_FREQ 0x989680
