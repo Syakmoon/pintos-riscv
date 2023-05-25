@@ -19,9 +19,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y gcc-riscv64-unknown-elf
         sudo apt-get install -y fzf
+        sudo apt-get install -y qemu
 
-    - name: Run pintos-test do-nothing
+    - name: Build userprog
       working-directory: ./src/userprog
+      run: make
+
+    - name: Run do-nothing test
       run: |
-        make
-        ../utils/pintos-test do-nothing | grep -q 'pass'
+        cd src/utils
+        export PATH=$PATH:$(pwd)
+        cd ../userprog
+        pintos-test do-nothing | grep -q 'pass'
