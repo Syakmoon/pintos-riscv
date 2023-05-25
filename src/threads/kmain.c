@@ -104,6 +104,7 @@ static void init_paging(void) {
   sfence_vma();
 }
 
+/* Reads Pintos main kernel from the disk. */
 static void load_supervisor_kernel(void) {
   struct block* device;
   uintptr_t position;
@@ -214,7 +215,4 @@ void kmain(int hart UNUSED, void* fdt) {
 
   /* Switch to Supervisor mode. */
   return_to_supervisor();
-
-  /* It should never return to this function. */
-  NOT_REACHED();
 }

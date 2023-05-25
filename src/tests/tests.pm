@@ -176,6 +176,21 @@ sub compare_output {
 			&& !/^ eax=.* ebx=.* ecx=.* edx=.*/
 			&& !/^ esi=.* edi=.* esp=.* ebp=.*/
 			&& !/^ cs=.* ds=.* es=.* ss=.*/, @output);
+	
+	# This is for the RISC-V version intr_dump_frame().
+	@output = grep (!/^Page fault at.*in user context\.$/
+			&& !/: dying due to cause (0x0c|0x0d|0x0f) \(.*\).$/
+			&& !/^Interrupt 0x8a \(.*\) at epc=.*, cause .*/
+			&& !/^ stval=.*/
+			&& !/^ ra=.* sp=.* gp=.* tp=.*/
+			&& !/^ t0=.* t1=.* t2=.*/
+			&& !/^ s0=.* s1=.*/
+			&& !/^ a0=.* a1=.* a2=.* a3=.*/
+			&& !/^ a4=.* a5=.* a6=.* a7=.*/
+			&& !/^ s2=.* s3=.* s4=.* s5=.*/
+			&& !/^ s6=.* s7=.* s8=.* s9=.*/
+			&& !/^ s10=.* s11=.*/
+			&& !/^ t3=.* t4=.* t5=.* t6=.*/, @output);
     }
     die "unknown option " . (keys (%options))[0] . "\n" if %options;
 
