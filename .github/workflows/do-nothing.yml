@@ -23,4 +23,4 @@ jobs:
       working-directory: ./src/userprog
       run: |
         make
-        pintos-test do-nothing | grep -q 'pass'
+        ../utils/pintos-test do-nothing | grep -q 'pass'
