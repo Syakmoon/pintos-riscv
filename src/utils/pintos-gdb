@@ -4,8 +4,7 @@
 export PINTOS_PORT=${PINTOS_PORT:-1234}
 
 # Path to GDB macros file.  Customize for your site.
-GDBMACROS=/home/vagrant/code/pintos-riscv/src/utils/gdb-macros
-
+GDBMACROS=/home/vagrant/code/pintos-riscv/src/misc/gdb-macros
 
 GDBUSED=riscv64-unknown-elf-gdb
 
