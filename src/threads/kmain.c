@@ -176,7 +176,6 @@ static void return_to_supervisor() {
   uintptr_t init_main = KERNEL_PHYS_BASE + LOADER_KERN_BASE + 0x18;
   init_main = *(uintptr_t*) init_main;
 
-  // TEMP: we pretend that timer interrupt won't not happen before mret
   /* Set up the init thread's stack. */
   asm volatile("mv sp, %0" : : "r" (init_stack): "memory");
 

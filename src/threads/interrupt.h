@@ -30,7 +30,6 @@ enum intr_level intr_enable(void);
 enum intr_level intr_disable(void);
 
 /* Interrupt stack frame. */
-// TEMP: do we need to save CSR_STATUS?
 struct intr_frame {
   void (*epc)(void); /* Next instruction to execute. */
 
