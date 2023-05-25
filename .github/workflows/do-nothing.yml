@@ -30,5 +30,4 @@ jobs:
         cd src/utils
         export PATH=$PATH:$(pwd)
         cd ../userprog
-        command -v qemu-system-riscv32
         pintos-test do-nothing | grep -q 'pass'
