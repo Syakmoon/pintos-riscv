@@ -102,6 +102,7 @@ DEPENDS = $(patsubst %.o,%.d,$(OBJECTS))
 threads/kernel.lds.s: CPPFLAGS += -P
 threads/kernel.lds.s: threads/kernel.lds.S threads/loader.h
 
+threads/loader.lds.s: CPPFLAGS += -P
 threads/loader.lds.s: threads/loader.lds.S threads/loader.h
 
 kernel.o: threads/kernel.lds.s $(OBJECTS)
