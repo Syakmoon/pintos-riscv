@@ -54,6 +54,11 @@ TODO
 - [ ] Further modify pintos, gdb-macros
 - [ ] Port to RISC-V 64-bit
 
+Known issues
+============
+- `double` arguments passed to `printf` will be read in a wrong byte order.
+- On some versions of QEMU, if `-m` is 4 MB (Pintos default), fdt will overlap.
+
 Screenshots
 ===========
 
