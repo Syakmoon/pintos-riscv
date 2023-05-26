@@ -58,7 +58,7 @@ Screenshots
 ===========
 
 ### Running `do-nothing`
-<img width="1179" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/3d8dbe54-a2fd-489b-8838-cb0486bffe28">
+<img width="1054" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/751bb695-0ab4-4bd8-9870-ac10370ebe90">
 
 ### With complete CS 162 code
 | Userprog | Threads | Filesys |
