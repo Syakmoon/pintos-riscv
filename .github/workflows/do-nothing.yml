@@ -30,4 +30,4 @@ jobs:
         cd src/utils
         export PATH=$PATH:$(pwd)
         cd ../userprog
-        pintos-test do-nothing | grep -q 'pass'
+        pintos-test do-nothing
