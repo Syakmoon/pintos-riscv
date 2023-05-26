@@ -16,6 +16,7 @@ Prerequisites
 - [RISC-V GNU Compiler Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 - QEMU >= 7.1.0 (If not included in the toolchain)
 - Perl >= 5.8.0
+- Python >= 3.6.0, python-is-python3
 - fzf
 - cgdb >= 0.8.0
 
