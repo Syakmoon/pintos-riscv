@@ -55,3 +55,11 @@ TODO
 
 Screenshots
 ===========
+
+### Running `do-nothing`
+<img width="1179" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/c0dffe9c-df59-4be5-8d7e-02db36cbc9de">
+
+### With complete CS 162 code
+| Userprog | Threads | Filesys |
+| -------- | ------- | ------- |
+| <img width="288" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/62b5b8e5-f82b-4da1-962f-c57db7e6314d"> | <img width="345" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/10c03c19-5ed2-48c2-80c7-de85c3a01620"> | <img width="395" src="https://github.com/Syakmoon/pintos-riscv/assets/43796875/5b5a3b9b-59b2-4a74-ba7b-9cd9673b3bc1"> |
