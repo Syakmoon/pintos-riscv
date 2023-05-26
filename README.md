@@ -11,7 +11,7 @@ group project skeleton (commit `6c80e04`).
 Prerequisites
 =============
 
-## Linux
+### Linux
 - GNU make
 - [RISC-V GNU Compiler Toolchain](https://github.com/riscv-collab/riscv-gnu-toolchain)
 - QEMU >= 7.1.0 (If not included in the toolchain)
