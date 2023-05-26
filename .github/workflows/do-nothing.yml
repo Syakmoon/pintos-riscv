@@ -29,5 +29,5 @@ jobs:
       run: |
         cd src/utils
         export PATH=$PATH:$(pwd)
-        cd ../userprog
-        pintos-test do-nothing
+        cd ../userprog/build
+        pintos -v -k -T 60 --qemu  --filesys-size=2 -p tests/userprog/do-nothing -a do-nothing -- -q   -f run do-nothing
