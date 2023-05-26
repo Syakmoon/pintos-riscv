@@ -1,8 +1,8 @@
 Pintos RISC-V
 =============
 
-[![build](https://github.com/Syakmoon/pintos-riscv-private/actions/workflows/makefile.yml/badge.svg)](https://github.com/Syakmoon/pintos-riscv-private/actions/workflows/makefile.yml)
-[![do-nothing](https://github.com/Syakmoon/pintos-riscv-private/actions/workflows/do-nothing.yml/badge.svg)](https://github.com/Syakmoon/pintos-riscv-private/actions/workflows/do-nothing.yml)
+[![build](https://github.com/Syakmoon/pintos-riscv/actions/workflows/makefile.yml/badge.svg)](https://github.com/Syakmoon/pintos-riscv/actions/workflows/makefile.yml)
+[![do-nothing](https://github.com/Syakmoon/pintos-riscv/actions/workflows/do-nothing.yml/badge.svg)](https://github.com/Syakmoon/pintos-riscv/actions/workflows/do-nothing.yml)
 
 This is a RISC-V port of the original x86 Pintos instructional operating
 system. The version I used for implementation is Berkeley CS162 Fall 2021's
